@@ -7,7 +7,7 @@
   --gold: #bfa27a;       /* warm gold */
   --gold-soft: rgba(191,162,122,0.18);
   --ring: #7b9c6b;       /* earthy green for progress */
-  --text-main: #e6d9c5;  /* champagne */
+  --text-main: #e6d9c5bd;  /* champagne */
   --text-dim: rgba(230,217,197,0.65);
 }
 
@@ -15,7 +15,7 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro", Inter, sans-serif;
+  font-family: "Palatino Linotype", "Book Antiqua", Palatino, "Segoe UI", serif;
 }
 
 body {
@@ -192,9 +192,9 @@ body {
 }
 
 .section-title {
-  font-size: 17px;
+  font-size: 19px;
   font-family: "Georgia", serif;
-  color: var(--text-main);
+  color: #938262;
   letter-spacing: 0.2px;
 }
 

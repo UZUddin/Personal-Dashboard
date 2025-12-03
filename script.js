@@ -1,4 +1,5 @@
 // ---------- CONSTANTS ----------
+const DASH_CONFIG = (typeof window !== "undefined" && window.DASH_CONFIG) || {};
 const RING_RADIUS = 32;
 const RING_CIRC = 2 * Math.PI * RING_RADIUS;
 const DAY_KEY = "dash_lastDayKey";
@@ -6,8 +7,9 @@ const CONSISTENCY_KEY = "dash_consistencyHistory";
 const CALENDAR_AUTH_KEY = "dash_calendarAuthed";
 const CALENDAR_HIDDEN_KEY = "dash_calendarHiddenEvents";
 // Google Calendar settings — replace the placeholders with your own keys
-const GOOGLE_CLIENT_ID = "937730038587-2h98cjh6t1tk4i0n3r7mckibils2cb6u.apps.googleusercontent.com";
-const GOOGLE_API_KEY = "AIzaSyDOuPBt1SEWtvEN7ZHqB98Z6Uq2SlmlyFQ";
+const GOOGLE_CLIENT_ID =
+  DASH_CONFIG.GOOGLE_CLIENT_ID || "SET_GOOGLE_CLIENT_ID.apps.googleusercontent.com";
+const GOOGLE_API_KEY = DASH_CONFIG.GOOGLE_API_KEY || "SET_GOOGLE_API_KEY";
 const GOOGLE_CALENDAR_ID = "primary";
 const GOOGLE_DISCOVERY_DOCS = [
   "https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest",
@@ -40,9 +42,9 @@ let calendarTriedSilent = false;
 function calendarConfigReady() {
   return (
     GOOGLE_CLIENT_ID &&
-    !GOOGLE_CLIENT_ID.startsWith("YOUR_") &&
+    !GOOGLE_CLIENT_ID.startsWith("SET_") &&
     GOOGLE_API_KEY &&
-    GOOGLE_API_KEY !== "YOUR_API_KEY"
+    GOOGLE_API_KEY !== "SET_GOOGLE_API_KEY"
   );
 }
 
