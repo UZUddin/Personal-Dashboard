@@ -262,7 +262,10 @@ body {
   width: 100%;
   height: 100%;
   display: block;
-  filter: drop-shadow(0 6px 12px rgba(0,0,0,0.25));
+  filter:
+    drop-shadow(0 12px 26px rgba(0,0,0,0.32))
+    drop-shadow(0 0 22px rgba(233,221,175,0.58))
+    drop-shadow(0 0 34px rgba(123,156,107,0.34));
 }
 
 .weather-temp {
@@ -410,7 +413,7 @@ body {
   column-gap: 80px;
   align-items: baseline;
   margin-bottom: 6px;
-  margin-left: 40px;
+  margin-left: 60px;
   justify-content: start;
 }
 
@@ -499,4 +502,5 @@ body {
   width: 100%;
   justify-content: center;
   align-items: stretch;
+  padding-top: 40px;
 }
