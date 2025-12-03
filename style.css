@@ -162,6 +162,15 @@ body {
   cursor: text;
 }
 
+.stealth-edit {
+  cursor: default;
+}
+
+.stealth-edit:focus {
+  cursor: text;
+  outline: none;
+}
+
 .editable.placeholder {
   color: rgba(230,217,197,0.35);
 }
@@ -305,6 +314,28 @@ body {
   cursor: text;
 }
 
+/* Prayer list */
+.prayer-list {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--text-main);
+}
+
+.prayer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+
+.prayer-name {
+  color: var(--text-dim);
+}
+
+.prayer-time {
+  font-variant-numeric: tabular-nums;
+}
+
 /* Consistency chart */
 #consistencyChartWrapper {
   margin-top: 4px;
@@ -340,13 +371,4 @@ body {
   .header-right {
     align-items: flex-start;
   }
-}
-
-.stealth-edit {
-  cursor: default;           /* looks like normal text */
-}
-
-.stealth-edit:focus {
-  cursor: text;              /* when tapped, you still get caret */
-  outline: none;
 }

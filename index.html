@@ -17,8 +17,8 @@
   <!-- HEADER: date above big time + progress ring -->
   <div class="header">
     <div class="header-left">
-      <div id="date" class="date serif">Tuesday, December 2</div>
-      <div id="time" class="time serif">9:30pm</div>
+      <div id="date" class="date serif"></div>
+      <div id="time" class="time serif"></div>
     </div>
 
     <div class="header-right">
@@ -44,10 +44,10 @@
         <div class="weather-main">
           <div class="weather-icon"></div>
 
-          <div class="editable weather-temp serif" data-save="weatherTemp">
+          <div class="editable weather-temp serif" data-save="weatherTemp" contenteditable="true">
 65°F
           </div>
-          <div class="editable weather-detail" data-save="weatherRange">
+          <div class="editable weather-detail" data-save="weatherRange" contenteditable="true">
 34°F / 89°F · bring a light coat!
           </div>
         </div>
@@ -64,20 +64,18 @@
           data-save="notes"
           contenteditable="true"
         >
-      Anything you want to remember for later tonight or tomorrow.
+Anything you want to remember for later tonight or tomorrow.
         </div>
       </div>
-
-
     </div>
 
-    <!-- COLUMN 2: Daily To Do + Monthly Focus -->
+    <!-- COLUMN 2: Monthly Focus + Daily To Do -->
     <div class="column">
-    <!-- Monthly Focus -->
+      <!-- Monthly Focus -->
       <div class="section">
         <div class="section-title serif">Monthly Focus</div>
         <div
-          class="editable"
+          class="editable stealth-edit"
           style="min-height: 70px;"
           data-save="monthlyFocus"
           contenteditable="true"
@@ -113,7 +111,7 @@
       </div>
     </div>
 
-    <!-- COLUMN 3: Daily Habits + Recent Sleep + Consistency Monitor -->
+    <!-- COLUMN 3: Habits + Sleep + Prayer + Consistency -->
     <div class="column">
       <!-- Daily Habits -->
       <div class="section">
@@ -142,8 +140,21 @@
       <!-- Recent Sleep Quality -->
       <div class="section">
         <div class="section-title serif">Recent Sleep Quality</div>
-        <div class="sleep-box editable" data-save="sleepSummary">
+        <div class="sleep-box editable" data-save="sleepSummary" contenteditable="true">
 Log how the last few nights felt (hours, restfulness, any patterns you notice).
+        </div>
+      </div>
+
+      <div class="hline"></div>
+
+      <!-- Prayer Times -->
+      <div class="section">
+        <div class="section-title serif">Prayer Times</div>
+        <div class="section-subtitle" id="prayerLocationLabel">
+          Today
+        </div>
+        <div id="prayerTimes" class="prayer-list small-note">
+          Loading prayer times…
         </div>
       </div>
 
@@ -153,12 +164,12 @@ Log how the last few nights felt (hours, restfulness, any patterns you notice).
       <div class="section">
         <div class="section-title serif">Consistency Monitor</div>
         <div class="section-subtitle">
-          Daily To-Do completion over time.
+          Tasks + habits completion over time.
         </div>
         <div id="consistencyChartWrapper">
           <div id="consistencyChart"></div>
           <div id="consistencyEmpty" class="small-note">
-            Once you start checking off Daily To-Do items, your history will appear here.
+            Once you start checking things off, your history will appear here.
           </div>
         </div>
       </div>
@@ -166,10 +177,9 @@ Log how the last few nights felt (hours, restfulness, any patterns you notice).
   </div>
 
   <div class="footer">
-    Daily To-Do resets at midnight · Habits & notes stay until you change them · Ring + chart show To-Do completion ✨
+    Daily To-Do resets at midnight · Habits, notes & focus stay until you change them · Ring + chart = tasks + habits ✨
   </div>
 
   <script src="script.js"></script>
 </body>
 </html>
-

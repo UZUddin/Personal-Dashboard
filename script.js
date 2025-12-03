@@ -1,12 +1,23 @@
-const RING_CIRC = 2 * Math.PI * 32;
+// ---------- CONSTANTS ----------
+const RING_RADIUS = 32;
+const RING_CIRC = 2 * Math.PI * RING_RADIUS;
 const DAY_KEY = "dash_lastDayKey";
 const CONSISTENCY_KEY = "dash_consistencyHistory";
+
+// --- PRAYER TIME CONFIG ---
+const PRAYER_API_CONFIG = {
+  city: "Atlanta",          // change as needed
+  country: "United States", // change as needed
+  method: 2,                // ISNA; can change to other methods
+};
 
 // ---------- TIME & DATE ----------
 function updateTime() {
   const now = new Date();
   const timeEl = document.getElementById("time");
   const dateEl = document.getElementById("date");
+
+  if (!timeEl || !dateEl) return;
 
   const hours = now.getHours();
   const minutes = String(now.getMinutes()).padStart(2, "0");
@@ -50,8 +61,7 @@ function applyChecklistStyles() {
   document.querySelectorAll(".check-item").forEach((item) => {
     const cb = item.querySelector('input[type="checkbox"]');
     if (!cb) return;
-    if (cb.checked) item.classList.add("completed");
-    else item.classList.remove("completed");
+    item.classList.toggle("completed", cb.checked);
   });
 }
 
@@ -67,7 +77,6 @@ function computeOverallCompletionRatio() {
   });
   return total ? checked / total : 0;
 }
-
 
 function updateProgressRing() {
   const progress = computeOverallCompletionRatio();
@@ -85,10 +94,14 @@ function updateProgressRing() {
     if (cb.checked) checked++;
   });
 
-  if (ring) ring.style.strokeDashoffset = offset;
-  if (text) text.textContent = total ? `${checked}/${total}` : "0/0";
+  if (ring) {
+    ring.style.strokeDasharray = String(RING_CIRC);
+    ring.style.strokeDashoffset = String(offset);
+  }
+  if (text) {
+    text.textContent = total ? `${checked}/${total}` : "0/0";
+  }
 }
-
 
 function saveChecklist(listEl) {
   const key = "dash_" + listEl.dataset.save;
@@ -118,24 +131,26 @@ function loadChecklists() {
     if (saved) {
       try {
         const items = JSON.parse(saved);
-        listEl.innerHTML = "";
-        items.forEach((item) => {
-          const wrap = document.createElement("div");
-          wrap.className = "check-item";
+        if (Array.isArray(items)) {
+          listEl.innerHTML = "";
+          items.forEach((item) => {
+            const wrap = document.createElement("div");
+            wrap.className = "check-item";
 
-          const cb = document.createElement("input");
-          cb.type = "checkbox";
-          cb.checked = !!item.checked;
+            const cb = document.createElement("input");
+            cb.type = "checkbox";
+            cb.checked = !!item.checked;
 
-          const label = document.createElement("span");
-          label.className = "label";
-          label.contentEditable = "true";
-          label.textContent = item.label || "";
+            const label = document.createElement("span");
+            label.className = "label";
+            label.contentEditable = "true";
+            label.textContent = item.label || "";
 
-          wrap.appendChild(cb);
-          wrap.appendChild(label);
-          listEl.appendChild(wrap);
-        });
+            wrap.appendChild(cb);
+            wrap.appendChild(label);
+            listEl.appendChild(wrap);
+          });
+        }
       } catch (e) {
         console.error("Failed to load checklist", key, e);
       }
@@ -281,6 +296,63 @@ function renderConsistencyChart() {
   container.innerHTML = `<svg viewBox="0 0 ${width} ${height}">${baseline}${polyline}${circles}</svg>`;
 }
 
+// ---------- PRAYER TIMES ----------
+function fetchPrayerTimes() {
+  const cfg = PRAYER_API_CONFIG;
+  const labelEl = document.getElementById("prayerLocationLabel");
+  const listEl = document.getElementById("prayerTimes");
+
+  if (!listEl) return;
+
+  if (labelEl) {
+    labelEl.textContent = `Today • ${cfg.city}`;
+  }
+
+  listEl.textContent = "Loading prayer times…";
+
+  const url =
+    "https://api.aladhan.com/v1/timingsByCity" +
+    `?city=${encodeURIComponent(cfg.city)}` +
+    `&country=${encodeURIComponent(cfg.country)}` +
+    `&method=${encodeURIComponent(cfg.method)}`;
+
+  fetch(url)
+    .then((res) => res.json())
+    .then((data) => {
+      if (!data || data.code !== 200 || !data.data || !data.data.timings) {
+        throw new Error("Bad response");
+      }
+      const t = data.data.timings;
+      const order = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"];
+
+      listEl.innerHTML = "";
+      order.forEach((name) => {
+        const timeVal = t[name];
+        if (!timeVal) return;
+
+        const row = document.createElement("div");
+        row.className = "prayer-row";
+
+        const label = document.createElement("span");
+        label.className = "prayer-name";
+        label.textContent = name;
+
+        const time = document.createElement("span");
+        time.className = "prayer-time";
+        time.textContent = timeVal;
+
+        row.appendChild(label);
+        row.appendChild(time);
+        listEl.appendChild(row);
+      });
+    })
+    .catch((err) => {
+      console.error("Prayer time fetch error:", err);
+      listEl.textContent =
+        "Couldn’t load prayer times. Check your connection or city setting.";
+    });
+}
+
 // ---------- MIDNIGHT ROLLOVER ----------
 function initDailyRollover() {
   const today = getDayString();
@@ -297,7 +369,7 @@ function initDailyRollover() {
     const stored = localStorage.getItem(DAY_KEY) || current;
 
     if (current !== stored) {
-      // New day.
+      // We're crossing into a new day.
       const completion = computeOverallCompletionRatio();
       logDayCompletion(stored, completion);
 
@@ -324,4 +396,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   renderConsistencyChart();
   initDailyRollover();
+
+  fetchPrayerTimes();
 });
