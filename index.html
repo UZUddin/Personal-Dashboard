@@ -81,6 +81,18 @@ Clear with evening breeze · add a light coat
 
           <button class="add-btn" data-target="tomorrowTasks">+ Add for tomorrow</button>
         </div>
+        <div class="hline"></div>
+        <div class="section">
+          <div class="section-title serif">Notes</div>
+          <div
+            class="editable"
+            style="min-height: 80px;"
+            data-save="notes"
+            contenteditable="true"
+          >
+Anything you want to remember for later tonight or tomorrow.
+          </div>
+        </div>
       </div>
 
       <!-- COLUMN 2: Monthly Focus + Daily To Do -->
@@ -132,16 +144,17 @@ Clear with evening breeze · add a light coat
         </div>
 
         <div class="hline"></div>
-        <!-- Notes -->
+        <!-- Consistency Monitor -->
         <div class="section">
-          <div class="section-title serif">Notes</div>
-          <div
-            class="editable"
-            style="min-height: 80px;"
-            data-save="notes"
-            contenteditable="true"
-          >
-Anything you want to remember for later tonight or tomorrow.
+          <div class="section-title serif">Consistency Monitor</div>
+          <div class="section-subtitle">
+            Tasks + habits completion over time.
+          </div>
+          <div id="consistencyChartWrapper">
+            <div id="consistencyChart"></div>
+            <div id="consistencyEmpty" class="small-note">
+              Once you start checking things off, your history will appear here.
+            </div>
           </div>
         </div>
 
@@ -149,6 +162,23 @@ Anything you want to remember for later tonight or tomorrow.
 
       <!-- COLUMN 3: Habits + Sleep + Prayer + Consistency -->
       <div class="column">
+
+        <!-- Google Calendar -->
+        <div class="section">
+          <div class="section-header">
+            <div>
+              <div class="section-title serif">Google Calendar</div>
+            </div>
+            <div class="calendar-actions compact">
+              <button id="calendarAuthButton" class="pill-btn">Connect</button>
+              <button id="calendarSignOut" class="pill-btn ghost" style="display: none;">Sign out</button>
+            </div>
+          </div>
+          <div id="calendarStatus" class="small-note" style="display: none;"></div>
+          <div id="calendarEvents" class="calendar-list checklist"></div>
+        </div>
+
+        <div class="hline"></div>
 
         <!-- Monthly Focus -->
         <div class="section">
@@ -177,22 +207,6 @@ Anything you want to remember for later tonight or tomorrow.
             Loading prayer times…
           </div>
         </div>
-
-        <div class="hline"></div>
-
-        <!-- Consistency Monitor -->
-        <div class="section">
-          <div class="section-title serif">Consistency Monitor</div>
-          <div class="section-subtitle">
-            Tasks + habits completion over time.
-          </div>
-          <div id="consistencyChartWrapper">
-            <div id="consistencyChart"></div>
-            <div id="consistencyEmpty" class="small-note">
-              Once you start checking things off, your history will appear here.
-            </div>
-          </div>
-        </div>
       </div>
     </div>
     </div> <!-- end main-content -->
@@ -203,5 +217,7 @@ Anything you want to remember for later tonight or tomorrow.
   </div>
 
   <script src="script.js"></script>
+  <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+  <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
 </body>
 </html>

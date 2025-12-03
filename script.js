@@ -3,6 +3,16 @@ const RING_RADIUS = 32;
 const RING_CIRC = 2 * Math.PI * RING_RADIUS;
 const DAY_KEY = "dash_lastDayKey";
 const CONSISTENCY_KEY = "dash_consistencyHistory";
+const CALENDAR_AUTH_KEY = "dash_calendarAuthed";
+const CALENDAR_HIDDEN_KEY = "dash_calendarHiddenEvents";
+// Google Calendar settings — replace the placeholders with your own keys
+const GOOGLE_CLIENT_ID = "937730038587-2h98cjh6t1tk4i0n3r7mckibils2cb6u.apps.googleusercontent.com";
+const GOOGLE_API_KEY = "AIzaSyDOuPBt1SEWtvEN7ZHqB98Z6Uq2SlmlyFQ";
+const GOOGLE_CALENDAR_ID = "primary";
+const GOOGLE_DISCOVERY_DOCS = [
+  "https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest",
+];
+const GOOGLE_SCOPES = "https://www.googleapis.com/auth/calendar.readonly";
 const WEATHER_ICON_KIND = {
   SUNNY: "sunny",
   CLOUDY: "cloudy",
@@ -20,6 +30,304 @@ const PRAYER_API_CONFIG = {
   country: "United States", // change as needed
   method: 2,                // ISNA; can change to other methods
 };
+
+// ---------- GOOGLE CALENDAR ----------
+let calendarTokenClient = null;
+let calendarGapiReady = false;
+let calendarGisReady = false;
+let calendarTriedSilent = false;
+
+function calendarConfigReady() {
+  return (
+    GOOGLE_CLIENT_ID &&
+    !GOOGLE_CLIENT_ID.startsWith("YOUR_") &&
+    GOOGLE_API_KEY &&
+    GOOGLE_API_KEY !== "YOUR_API_KEY"
+  );
+}
+
+function initCalendarUI() {
+  const connectBtn = document.getElementById("calendarAuthButton");
+  const signOutBtn = document.getElementById("calendarSignOut");
+  const statusEl = document.getElementById("calendarStatus");
+
+  if (!connectBtn || !signOutBtn || !statusEl) return;
+
+  if (!calendarConfigReady()) {
+    connectBtn.disabled = true;
+    signOutBtn.disabled = true;
+    statusEl.textContent =
+      "Add your Google client ID and API key in script.js to enable.";
+    return;
+  }
+
+  connectBtn.addEventListener("click", onCalendarAuthClick);
+  signOutBtn.addEventListener("click", onCalendarSignOut);
+  statusEl.textContent = "Connect to pull the next few events.";
+}
+
+function gapiLoaded() {
+  if (!calendarConfigReady()) return;
+  if (typeof gapi === "undefined") return;
+  gapi.load("client", initializeGapiClient);
+}
+
+async function initializeGapiClient() {
+  try {
+    await gapi.client.init({
+      apiKey: GOOGLE_API_KEY,
+      discoveryDocs: GOOGLE_DISCOVERY_DOCS,
+    });
+    calendarGapiReady = true;
+    updateCalendarButtons();
+    attemptSilentCalendarAuth();
+  } catch (err) {
+    console.error("Google API init failed", err);
+    setCalendarStatus("Couldn’t load Google API. Check your API key.");
+  }
+}
+
+function gisLoaded() {
+  if (!calendarConfigReady()) return;
+  if (typeof google === "undefined" || !google.accounts) return;
+
+  calendarTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: GOOGLE_SCOPES,
+    callback: async (resp) => {
+      if (resp.error) {
+        console.error("Google token error", resp);
+        setCalendarStatus("Google sign-in failed. Try again.");
+        return;
+      }
+      localStorage.setItem(CALENDAR_AUTH_KEY, "1");
+      setCalendarStatus("Loading events…");
+      await listUpcomingEvents();
+      updateCalendarButtons();
+    },
+  });
+
+  calendarGisReady = true;
+  updateCalendarButtons();
+  attemptSilentCalendarAuth();
+}
+
+function onCalendarAuthClick() {
+  if (!calendarGapiReady || !calendarGisReady || !calendarTokenClient) {
+    setCalendarStatus("Google client still loading. Try again in a moment.");
+    return;
+  }
+  const token = gapi.client.getToken();
+  if (!token) {
+    calendarTokenClient.requestAccessToken({ prompt: "consent" });
+  } else {
+    listUpcomingEvents();
+  }
+}
+
+function onCalendarSignOut() {
+  const token = gapi.client.getToken && gapi.client.getToken();
+  if (token && token.access_token) {
+    google.accounts.oauth2.revoke(token.access_token);
+    gapi.client.setToken("");
+  }
+  localStorage.removeItem(CALENDAR_AUTH_KEY);
+  const list = document.getElementById("calendarEvents");
+  if (list) list.innerHTML = "";
+  setCalendarStatus("Signed out. Connect to load events.");
+  updateCalendarButtons();
+}
+
+async function listUpcomingEvents() {
+  const listEl = document.getElementById("calendarEvents");
+  if (listEl) listEl.innerHTML = "";
+
+  if (!calendarGapiReady) {
+    setCalendarStatus("Google client is not ready yet.");
+    return;
+  }
+
+  try {
+    const response = await gapi.client.calendar.events.list({
+      calendarId: GOOGLE_CALENDAR_ID,
+      timeMin: new Date().toISOString(),
+      showDeleted: false,
+      singleEvents: true,
+      maxResults: 5,
+      orderBy: "startTime",
+    });
+
+    const events = response.result.items;
+    if (!events || !events.length) {
+      setCalendarStatus("No upcoming events found.");
+      return;
+    }
+
+    const hidden = getHiddenCalendarEvents();
+    const visibleEvents = events.filter((ev) => {
+      const key = buildEventInstanceKey(ev);
+      return !key || !hidden.has(key);
+    });
+
+    if (!visibleEvents.length) {
+      setCalendarStatus("You’ve checked off all shown events.");
+      renderCalendarEvents([]);
+      return;
+    }
+
+    renderCalendarEvents(visibleEvents);
+    setCalendarStatus("");
+  } catch (err) {
+    console.error("Calendar fetch failed", err);
+    setCalendarStatus("Couldn’t load events. Check permissions or calendar ID.");
+  }
+}
+
+function renderCalendarEvents(events) {
+  const listEl = document.getElementById("calendarEvents");
+  if (!listEl) return;
+
+  listEl.innerHTML = "";
+  events.forEach((event) => {
+    const row = document.createElement("div");
+    row.className = "check-item";
+    const key = buildEventInstanceKey(event);
+    if (key) row.dataset.eventKey = key;
+
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+
+    const body = document.createElement("div");
+    body.className = "calendar-event-body";
+
+    const title = document.createElement("span");
+    title.className = "label calendar-event-title";
+    title.textContent = event.summary || "No title";
+
+    const time = document.createElement("div");
+    time.className = "calendar-event-time";
+    time.textContent = formatEventTime(event);
+
+    body.appendChild(title);
+
+    row.appendChild(cb);
+    row.appendChild(body);
+    row.appendChild(time);
+
+    cb.addEventListener("change", () => {
+      row.classList.toggle("completed", cb.checked);
+      if (cb.checked) {
+        if (key) addHiddenCalendarEvent(key);
+        setTimeout(() => {
+          if (row.parentElement) {
+            row.remove();
+            if (!listEl.querySelector(".check-item")) {
+              setCalendarStatus("You’ve checked off all shown events.");
+            }
+          }
+        }, 150);
+      }
+    });
+
+    listEl.appendChild(row);
+  });
+  applyChecklistStyles();
+}
+
+function formatEventTime(event) {
+  const start = event.start && (event.start.dateTime || event.start.date);
+  if (!start) return "TBD";
+
+  if (event.start.date) {
+    const d = new Date(`${start}T00:00:00`);
+    return d.toLocaleDateString(undefined, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
+  }
+
+  const d = new Date(start);
+  const datePart = d.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+  const timePart = d.toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  return `${timePart} · ${datePart}`;
+}
+
+function setCalendarStatus(text) {
+  const statusEl = document.getElementById("calendarStatus");
+  if (!statusEl) return;
+  const msg = (text || "").trim();
+  statusEl.textContent = msg;
+  statusEl.style.display = msg ? "block" : "none";
+}
+
+function updateCalendarButtons() {
+  const connectBtn = document.getElementById("calendarAuthButton");
+  const signOutBtn = document.getElementById("calendarSignOut");
+  if (!connectBtn || !signOutBtn) return;
+
+  const hasToken =
+    typeof gapi !== "undefined" &&
+    gapi.client &&
+    gapi.client.getToken &&
+    !!gapi.client.getToken();
+
+  connectBtn.textContent = hasToken ? "Refresh events" : "Connect calendar";
+  signOutBtn.style.display = hasToken ? "inline-flex" : "none";
+}
+
+function attemptSilentCalendarAuth() {
+  if (
+    calendarTriedSilent ||
+    !calendarConfigReady() ||
+    !calendarGapiReady ||
+    !calendarGisReady ||
+    !calendarTokenClient
+  ) {
+    return;
+  }
+  const wasAuthed = localStorage.getItem(CALENDAR_AUTH_KEY) === "1";
+  if (!wasAuthed) return;
+
+  calendarTriedSilent = true;
+  calendarTokenClient.requestAccessToken({ prompt: "" });
+}
+
+function buildEventInstanceKey(event) {
+  if (!event) return null;
+  const start = event.start && (event.start.dateTime || event.start.date);
+  if (!start) return null;
+  const id = event.id || event.summary || "event";
+  return `${id}__${start}`;
+}
+
+function getHiddenCalendarEvents() {
+  const raw = localStorage.getItem(CALENDAR_HIDDEN_KEY);
+  if (!raw) return new Set();
+  try {
+    const arr = JSON.parse(raw);
+    if (Array.isArray(arr)) return new Set(arr);
+  } catch (e) {
+    console.error("Bad hidden calendar list", e);
+  }
+  return new Set();
+}
+
+function saveHiddenCalendarEvents(set) {
+  localStorage.setItem(CALENDAR_HIDDEN_KEY, JSON.stringify([...set]));
+}
+
+function addHiddenCalendarEvent(key) {
+  const set = getHiddenCalendarEvents();
+  set.add(key);
+  saveHiddenCalendarEvents(set);
+}
 
 // ---------- TIME & DATE ----------
 function updateTime() {
@@ -50,7 +358,10 @@ function loadEditableFields() {
     const key = "dash_" + el.dataset.save;
     const saved = localStorage.getItem(key);
     if (saved !== null && saved !== undefined) {
-      el.textContent = saved;
+      const value = isNotesField(el)
+        ? normalizeNotesContent(saved)
+        : saved;
+      el.textContent = value;
       el.classList.remove("placeholder");
     }
   });
@@ -60,10 +371,23 @@ function attachEditableSaveListeners() {
   document.querySelectorAll(".editable[data-save]").forEach((el) => {
     const key = "dash_" + el.dataset.save;
     el.addEventListener("input", () => {
-      localStorage.setItem(key, el.textContent);
+      const value = isNotesField(el) ? el.innerText : el.textContent;
+      localStorage.setItem(key, value);
       el.classList.remove("placeholder");
     });
   });
+}
+
+function isNotesField(el) {
+  return el.dataset && el.dataset.save === "notes";
+}
+
+function normalizeNotesContent(raw) {
+  if (typeof raw !== "string") return "";
+  // Clean any stored HTML from previous saves; keep line breaks.
+  const div = document.createElement("div");
+  div.innerHTML = raw;
+  return div.innerText || "";
 }
 
 // ---------- CHECKLIST HELPERS ----------
@@ -441,6 +765,8 @@ document.addEventListener("DOMContentLoaded", () => {
   loadChecklists();
   attachChecklistListeners();
   attachAddButtons();
+
+  initCalendarUI();
 
   renderConsistencyChart();
   initDailyRollover();

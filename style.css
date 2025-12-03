@@ -181,10 +181,14 @@ body {
   flex-direction: column;
   gap: 10px;           /* was 6px */
   background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.06);
+  border: none;
+  box-shadow:
+    inset 2px 2px 5px rgba(0,0,0,0.45),
+    inset -2px -2px 5px rgba(0,0,0,0.25),
+    inset 0 0 0.5px rgba(0,0,0,0.3),
+    0 2px 6px rgba(0,0,0,0.22);
   border-radius: 14px;
   padding: 12px;
-  box-shadow: 0 10px 22px rgba(0,0,0,0.35);
 }
 
 .section-title {
@@ -192,6 +196,17 @@ body {
   font-family: "Georgia", serif;
   color: var(--text-main);
   letter-spacing: 0.2px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.section-header .section-title {
+  margin-bottom: 2px;
 }
 
 .section-subtitle {
@@ -389,6 +404,79 @@ body {
 
 .add-btn:active {
   background: rgba(191,162,122,0.22);
+}
+
+.pill-btn {
+  background: rgba(191,162,122,0.12);
+  border: 1px solid var(--gold-soft);
+  color: var(--text-main);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.pill-btn.ghost {
+  background: transparent;
+  color: var(--gold);
+}
+
+.pill-btn:active {
+  background: rgba(191,162,122,0.2);
+}
+
+.calendar-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.calendar-actions.compact {
+  justify-content: flex-end;
+}
+
+.calendar-list {
+  margin-top: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.calendar-event-meta {
+  font-size: 12px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  margin-left: 2px;
+}
+
+.calendar-event-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.calendar-event-time {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.calendar-actions.compact .pill-btn {
+  padding: 4px 10px;
+  font-size: 11px;
+}
+
+.calendar-list .check-item {
+  padding: 4px 6px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.02);
+}
+
+.calendar-list .label {
+  font-size: 13px;
 }
 
 .sleep-box {
