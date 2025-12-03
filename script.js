@@ -358,10 +358,7 @@ function loadEditableFields() {
     const key = "dash_" + el.dataset.save;
     const saved = localStorage.getItem(key);
     if (saved !== null && saved !== undefined) {
-      const value = isNotesField(el)
-        ? normalizeNotesContent(saved)
-        : saved;
-      el.textContent = value;
+      el.textContent = saved;
       el.classList.remove("placeholder");
     }
   });
@@ -380,14 +377,6 @@ function attachEditableSaveListeners() {
 
 function isNotesField(el) {
   return el.dataset && el.dataset.save === "notes";
-}
-
-function normalizeNotesContent(raw) {
-  if (typeof raw !== "string") return "";
-  // Clean any stored HTML from previous saves; keep line breaks.
-  const div = document.createElement("div");
-  div.innerHTML = raw;
-  return div.innerText || "";
 }
 
 // ---------- CHECKLIST HELPERS ----------
