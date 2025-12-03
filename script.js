@@ -369,16 +369,20 @@ function initDailyRollover() {
     const stored = localStorage.getItem(DAY_KEY) || current;
 
     if (current !== stored) {
-      // We're crossing into a new day.
+      // Just before we switch days, record today's completion
       const completion = computeOverallCompletionRatio();
       logDayCompletion(stored, completion);
 
-      // Reset Daily Tasks only.
-      resetDailyTasks();
+      // Roll tasks forward:
+      //  - carry over incomplete Daily To-Do items
+      //  - add everything from Tomorrow To-Do
+      //  - clear Tomorrow list
+      rolloverTasksToNextDay();
 
-      // Update lastDay key.
+      // Update lastDay key to the new day
       localStorage.setItem(DAY_KEY, current);
     }
+
   }, 60000);
 }
 
@@ -399,3 +403,62 @@ document.addEventListener("DOMContentLoaded", () => {
 
   fetchPrayerTimes();
 });
+
+// Raw access to checklist data in localStorage (by id like "dailyTasks")
+function getChecklistData(saveId) {
+  const raw = localStorage.getItem("dash_" + saveId);
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : [];
+  } catch (e) {
+    console.error("Bad checklist data for", saveId, e);
+    return [];
+  }
+}
+
+function setChecklistData(saveId, items) {
+  localStorage.setItem("dash_" + saveId, JSON.stringify(items || []));
+}
+
+// Move incomplete daily tasks + all tomorrow tasks into new day's Daily To-Do
+function rolloverTasksToNextDay() {
+  const todayTasks = getChecklistData("dailyTasks");
+  const tomorrowTasks = getChecklistData("tomorrowTasks");
+
+  // Incomplete tasks from today (unchecked, non-empty label)
+  const incomplete = todayTasks.filter(
+    (item) =>
+      item &&
+      !item.checked &&
+      (item.label || "").trim() !== ""
+  );
+
+  // Tasks explicitly planned for tomorrow (ignore checked status, just labels)
+  const planned = tomorrowTasks.filter(
+    (item) =>
+      item &&
+      (item.label || "").trim() !== ""
+  );
+
+  // New day's task list: all carried + planned, all start unchecked
+  const nextDayTasks = [
+    ...incomplete.map((item) => ({
+      label: item.label,
+      checked: false,
+    })),
+    ...planned.map((item) => ({
+      label: item.label,
+      checked: false,
+    })),
+  ];
+
+  // Save into dailyTasks for the new day, clear tomorrowTasks
+  setChecklistData("dailyTasks", nextDayTasks);
+  setChecklistData("tomorrowTasks", []);
+
+  // Refresh UI if the page is open at midnight
+  loadChecklists();
+  updateProgressRing();
+}
+
