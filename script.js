@@ -55,9 +55,10 @@ function applyChecklistStyles() {
   });
 }
 
-function computeTodoCompletionRatio() {
+function computeOverallCompletionRatio() {
   const boxes = document.querySelectorAll(
-    '.checklist[data-save="dailyTasks"] input[type="checkbox"]'
+    '.checklist[data-save="dailyTasks"] input[type="checkbox"], ' +
+    '.checklist[data-save="dailyHabits"] input[type="checkbox"]'
   );
   const total = boxes.length;
   let checked = 0;
@@ -66,6 +67,7 @@ function computeTodoCompletionRatio() {
   });
   return total ? checked / total : 0;
 }
+
 
 function updateProgressRing() {
   const progress = computeTodoCompletionRatio();

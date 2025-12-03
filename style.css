@@ -341,3 +341,12 @@ body {
     align-items: flex-start;
   }
 }
+
+.stealth-edit {
+  cursor: default;           /* looks like normal text */
+}
+
+.stealth-edit:focus {
+  cursor: text;              /* when tapped, you still get caret */
+  outline: none;
+}
