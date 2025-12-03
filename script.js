@@ -191,11 +191,15 @@ function attachChecklistListeners() {
     listEl.addEventListener("input", (e) => {
       if (e.target.classList.contains("label")) {
         const label = e.target;
+        label.removeAttribute("data-new-item");
         pruneEmptyItems(listEl);
         saveChecklist(listEl);
       }
     });
-    listEl.addEventListener("blur", () => {
+    listEl.addEventListener("blur", (e) => {
+      if (e.target.classList.contains("label")) {
+        e.target.removeAttribute("data-new-item");
+      }
       pruneEmptyItems(listEl);
       saveChecklist(listEl);
     }, true);
@@ -221,13 +225,14 @@ function attachAddButtons() {
       label.className = "label";
       label.contentEditable = "true";
       label.textContent = "";
+      label.dataset.newItem = "true";
 
       wrap.appendChild(cb);
       wrap.appendChild(label);
       listEl.appendChild(wrap);
 
       label.focus();
-      saveChecklist(listEl);
+      // Don't prune/save until the user types something
     });
   });
 }
@@ -508,7 +513,10 @@ function pruneEmptyItems(listEl) {
   listEl.querySelectorAll(".check-item").forEach((item) => {
     const label = item.querySelector(".label");
     if (!label) return;
-    if ((label.textContent || "").trim() === "") {
+    const isFocused = document.activeElement === label;
+    const isNew = label.dataset.newItem === "true";
+    const empty = (label.textContent || "").trim() === "";
+    if (empty && !isFocused && !isNew) {
       item.remove();
     }
   });
