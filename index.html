@@ -9,11 +9,12 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=33">
 </head>
 
 <body>
   <div class="app-shell">
+    <div class="main-content">
     <!-- HEADER: date above big time + progress ring -->
     <div class="header">
       <div class="header-left">
@@ -28,6 +29,7 @@
             <circle class="ring-progress" cx="40" cy="40" r="32"></circle>
             <text x="40" y="43" class="ring-text">0/0</text>
           </svg>
+          <div class="progress-check">✓</div>
         </div>
       </div>
     </div>
@@ -35,37 +37,49 @@
     <!-- THREE COLUMN LAYOUT -->
     <div class="columns">
 
-      <!-- COLUMN 1: Weather + Notes -->
-      <div class="column">
-        <!-- Weather -->
-        <div class="section">
-          <div class="section-title serif">Today’s Weather</div>
+    <!-- COLUMN 1: Weather + Notes -->
+    <div class="column">
+      <!-- Weather -->
+      <div class="section">
+        <div class="section-title serif">Today’s Weather</div>
 
-          <div class="weather-main">
-            <div class="weather-icon"></div>
+        <div class="weather-main">
+          <div class="weather-icon"></div>
 
+          <div class="weather-temp-block">
             <div class="editable weather-temp serif" data-save="weatherTemp" contenteditable="true">
 65°F
             </div>
-            <div class="editable weather-detail" data-save="weatherRange" contenteditable="true">
-34°F / 89°F · bring a light coat!
+            <div class="weather-range">
+              <span class="editable weather-low" data-save="weatherLow" contenteditable="true">Low 34°F</span>
+              <span class="range-sep">•</span>
+              <span class="editable weather-high" data-save="weatherHigh" contenteditable="true">High 89°F</span>
             </div>
           </div>
+
+          <div class="editable weather-detail" data-save="weatherRange" contenteditable="true">
+Clear with evening breeze · add a light coat
+          </div>
+          <div id="weatherRecommendation" class="weather-reco small-note">
+            Light layers work well today.
+          </div>
         </div>
+      </div>
 
         <div class="hline"></div>
 
         <!-- Notes -->
         <div class="section">
-          <div class="section-title serif">Notes</div>
-          <div
-            class="editable"
-            style="min-height: 80px;"
-            data-save="notes"
-            contenteditable="true"
-          >
-Anything you want to remember for later tonight or tomorrow.
+          <div class="section-title serif">Tomorrow</div>
+          <div class="section-subtitle">
+            Add tasks that should show up in tomorrow’s Daily To-Do.
           </div>
+
+          <div class="checklist" data-save="tomorrowTasks">
+            <!-- starts empty; you add items with the button below -->
+          </div>
+
+          <button class="add-btn" data-target="tomorrowTasks">+ Add for tomorrow</button>
         </div>
       </div>
 
@@ -117,22 +131,20 @@ Anything you want to remember for later tonight or tomorrow.
           <button class="add-btn" data-target="dailyTasks">+ Add task</button>
         </div>
 
-        <!-- <div class="hline"></div>-->
-        <!-- Tomorrow To-Do -->
+        <div class="hline"></div>
+        <!-- Notes -->
         <div class="section">
-          <div class="section-title serif">Tomorrow</div>
-          <div class="section-subtitle">
-            Add tasks that should show up in tomorrow’s Daily To-Do.
+          <div class="section-title serif">Notes</div>
+          <div
+            class="editable"
+            style="min-height: 80px;"
+            data-save="notes"
+            contenteditable="true"
+          >
+Anything you want to remember for later tonight or tomorrow.
           </div>
-
-          <div class="checklist" data-save="tomorrowTasks">
-            <!-- starts empty; you add items with the button below -->
-          </div>
-
-          <button class="add-btn" data-target="tomorrowTasks">+ Add for tomorrow</button>
         </div>
 
-        <div class="hline"></div>
       </div>
 
       <!-- COLUMN 3: Habits + Sleep + Prayer + Consistency -->
@@ -183,6 +195,7 @@ Anything you want to remember for later tonight or tomorrow.
         </div>
       </div>
     </div>
+    </div> <!-- end main-content -->
 
     <div class="footer">
       Daily To-Do resets at midnight · Habits, notes & focus stay until you change them · Ring + chart = tasks + habits ✨

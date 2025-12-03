@@ -6,6 +6,7 @@
   --divider: rgba(255,255,255,0.12);
   --gold: #bfa27a;       /* warm gold */
   --gold-soft: rgba(191,162,122,0.18);
+  --ring: #7b9c6b;       /* earthy green for progress */
   --text-main: #e6d9c5;  /* champagne */
   --text-dim: rgba(230,217,197,0.65);
 }
@@ -21,20 +22,11 @@ body {
   background: radial-gradient(circle at top, var(--bg2) 0%, var(--bg1) 70%);
   color: var(--text-main);
   padding: 18px;
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  gap: 18px;
-}
-
-.app-shell {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
+  align-items: center;
+  justify-content: center;
 }
 
 .serif {
@@ -46,49 +38,58 @@ body {
 .header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
+  align-items: center;
+  gap: 18px;
+  padding: 4px 4px 4px;
 }
 
 .header-left {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .date {
-  font-size: 18px;
+  font-size: 20px;
   color: var(--text-dim);
-  margin-bottom: 4px;
   font-family: "Georgia", serif;
   text-align: center;
+  margin-left: 0;
+  margin-bottom: 0;
 }
 
 .time {
-  font-size: 64px;
+  font-size: 96px;
   font-weight: 300;
   font-family: "Georgia", serif;
   color: var(--text-main);
   line-height: 1;
   text-align: center;
-}
-
-.header-right {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
+  letter-spacing: 0.8px;
+  margin-top: 0;
+  margin-left: 0;
 }
 
 /* PROGRESS RING */
 .progress-wrapper {
-  width: 56px;
-  height: 56px;
+  width: 120px;
+  height: 120px;
   position: relative;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 45%, rgba(123,156,107,0.18), rgba(123,156,107,0.03));
+  box-shadow:
+    0 0 0 6px rgba(123,156,107,0.06),
+    0 0 24px rgba(123,156,107,0.35),
+    0 12px 30px rgba(0,0,0,0.35);
 }
 
 .progress-wrapper svg {
   width: 100%;
   height: 100%;
   transform: rotate(-90deg);
+  filter: drop-shadow(0 0 10px rgba(123,156,107,0.55));
+  transition: opacity 0.2s ease;
 }
 
 .ring-bg {
@@ -99,8 +100,8 @@ body {
 
 .ring-progress {
   fill: none;
-  stroke: var(--gold);
-  stroke-width: 4;
+  stroke: var(--ring);
+  stroke-width: 5;
   stroke-linecap: round;
   stroke-dasharray: 201;
   stroke-dashoffset: 201;
@@ -116,51 +117,90 @@ body {
   transform-origin: 40px 40px;
 }
 
+.progress-check {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 34px;
+  color: var(--ring);
+  opacity: 0;
+  transform: scale(0.9);
+  transition: opacity 0.15s ease, transform 0.2s ease;
+}
+
+.progress-wrapper.complete .progress-check {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.progress-wrapper.complete .ring-text {
+  opacity: 0;
+}
+
 /* THREE COLUMNS */
 .columns {
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0;
-  background: rgba(0,0,0,0.18);
-  border-radius: 18px;
-  border: 1px solid var(--border);
-  overflow: hidden;
-  box-shadow: 0 18px 40px rgba(0,0,0,0.6);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: 28px;
+  row-gap: 20px;
+  align-items: start;
+  background: transparent;
+  border-radius: 0;
+  border: none;
+  padding: 0;
+  margin-top: 0;
+  box-shadow: none;
 }
 
+.columns .column:first-child {
+  margin-top: 0;
+}
+
+
 .column {
-  padding: 18px 18px 14px;
-  background: var(--panel);
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   gap: 18px;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
 .column + .column {
-  border-left: 1px solid var(--divider);
+  border-left: none;
 }
 
 .section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;           /* was 6px */
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 14px;
+  padding: 12px;
+  box-shadow: 0 10px 22px rgba(0,0,0,0.35);
 }
 
 .section-title {
-  font-size: 16px;
+  font-size: 17px;
   font-family: "Georgia", serif;
   color: var(--text-main);
+  letter-spacing: 0.2px;
 }
 
 .section-subtitle {
   font-size: 13px;
-  color: var(--text-dim);
+  color: rgba(230,217,197,0.78);
 }
 
 .hline {
-  margin-top: 6px;
-  border-bottom: 1px solid var(--divider);
+  display: none;
 }
 
 .editable {
@@ -196,38 +236,71 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  margin-top: 8px;
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.weather-temp-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
 }
 
 .weather-icon {
-  width: 52px;
-  height: 52px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.25);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 110px;
+  height: 110px;
+  display: grid;
+  place-items: center;
   position: relative;
+  overflow: visible;
+  background: transparent;
+  border: none;
 }
 
-.weather-icon::before {
-  content: "";
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: 1px solid rgba(255,255,255,0.7);
+.weather-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  filter: drop-shadow(0 6px 12px rgba(0,0,0,0.25));
 }
 
 .weather-temp {
-  font-size: 24px;
+  font-size: 26px;
   font-family: "Georgia", serif;
+}
+
+.weather-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.weather-range .editable {
+  font-size: 13px;
+  color: var(--text-dim);
+  min-width: 64px;
+  text-align: center;
+}
+
+.range-sep {
+  color: var(--text-dim);
+  opacity: 0.6;
 }
 
 .weather-detail {
   font-size: 12px;
   color: var(--text-dim);
   text-align: center;
+}
+
+.weather-reco {
+  font-size: 12px;
+  color: var(--text-main);
+  text-align: center;
+  line-height: 1.4;
 }
 
 /* Checklist styles */
@@ -327,23 +400,30 @@ body {
 /* Prayer list */
 .prayer-list {
   margin-top: 6px;
-  font-size: 13px;
+  font-size: 20px;
   color: var(--text-main);
 }
 
 .prayer-row {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: auto auto;
+  column-gap: 80px;
   align-items: baseline;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
+  margin-left: 40px;
+  justify-content: start;
 }
 
 .prayer-name {
-  color: var(--text-dim);
+  color: var(--text-main);
+  letter-spacing: 0.4px;
+  text-align: right;
 }
 
 .prayer-time {
   font-variant-numeric: tabular-nums;
+  font-size: 15px;
+  text-align: left;
 }
 
 /* Consistency chart */
@@ -361,6 +441,12 @@ body {
   font-size: 11px;
   color: var(--text-dim);
   text-align: center;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 10px 0 14px;
+  background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.35) 60%);
 }
 
 @media (max-width: 1024px) {
@@ -391,4 +477,26 @@ body {
 
 .checklist[data-save="tomorrowTasks"] .check-item {
   padding-left: 0;
+}
+
+.app-shell {
+  width: 100%;
+  max-width: 1120px;          /* ← main width control: shrink/expand here */
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-height: calc(100vh - 64px); /* account for fixed footer */
+  padding-bottom: 64px; /* leave room for fixed footer */
+  justify-content: center;
+}
+
+.main-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  flex: 1;
+  width: 100%;
+  justify-content: center;
+  align-items: stretch;
 }
