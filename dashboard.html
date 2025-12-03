@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Bedside Dashboard</title>
+
+  <!-- iOS fullscreen web app -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <style>
+    :root {
+      --bg1: #0d0b0b;        /* deep charcoal */
+      --bg2: #1a1616;        /* warm black */
+      --panel: #1d1817;      /* dark panel background */
+      --border: rgba(255,255,255,0.10);
+      --divider: rgba(255,255,255,0.12);
+      --gold: #bfa27a;       /* warm gold */
+      --gold-soft: rgba(191,162,122,0.18);
+      --text-main: #e6d9c5;  /* champagne */
+      --text-dim: rgba(230,217,197,0.65);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro", Inter, sans-serif;
+    }
+
+    body {
+      background: radial-gradient(circle at top, var(--bg2) 0%, var(--bg1) 70%);
+      color: var(--text-main);
+      padding: 18px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .serif {
+      font-family: "Georgia", "Times New Roman", serif;
+      letter-spacing: 0.4px;
+    }
+
+    /* HEADER */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    .header-left {
+      flex: 1;
+    }
+
+    .date {
+      font-size: 18px;
+      color: var(--text-dim);
+      margin-bottom: 4px;
+      font-family: "Georgia", serif;
+      text-align: center;
+    }
+
+    .time {
+      font-size: 64px;
+      font-weight: 300;
+      font-family: "Georgia", serif;
+      color: var(--text-main);
+      line-height: 1;
+      text-align: center;
+    }
+
+    .header-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+    }
+
+    .pill {
+      padding: 7px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--gold-soft);
+      color: var(--gold);
+      font-size: 13px;
+      letter-spacing: 0.5px;
+      font-family: "Georgia", serif;
+      max-width: 220px;
+      text-align: right;
+      outline: none;
+      white-space: pre-wrap;
+      cursor: text;
+    }
+
+    /* PROGRESS RING */
+    .progress-wrapper {
+      width: 56px;
+      height: 56px;
+      position: relative;
+    }
+
+    .progress-wrapper svg {
+      width: 100%;
+      height: 100%;
+      transform: rotate(-90deg);
+    }
+
+    .ring-bg {
+      fill: none;
+      stroke: rgba(255,255,255,0.16);
+      stroke-width: 4;
+    }
+
+    .ring-progress {
+      fill: none;
+      stroke: var(--gold);
+      stroke-width: 4;
+      stroke-linecap: round;
+      stroke-dasharray: 201;
+      stroke-dashoffset: 201;
+      transition: stroke-dashoffset 0.25s ease;
+    }
+
+    .ring-text {
+      font-size: 11px;
+      fill: var(--text-main);
+      text-anchor: middle;
+      dominant-baseline: middle;
+      transform: rotate(90deg);
+      transform-origin: 40px 40px;
+    }
+
+    /* THREE COLUMNS */
+    .columns {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0; /* we'll use borders instead of gaps to mimic your mockup */
+      background: rgba(0,0,0,0.18);
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      box-shadow: 0 18px 40px rgba(0,0,0,0.6);
+    }
+
+    .column {
+      padding: 18px 18px 14px;
+      background: var(--panel);
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .column + .column {
+      border-left: 1px solid var(--divider);
+    }
+
+    .section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-family: "Georgia", serif;
+      color: var(--text-main);
+    }
+
+    .section-subtitle {
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+
+    .hline {
+      margin-top: 6px;
+      border-bottom: 1px solid var(--divider);
+    }
+
+    .editable {
+      font-size: 14px;
+      color: var(--text-main);
+      line-height: 1.4;
+      outline: none;
+      white-space: pre-wrap;
+      cursor: text;
+    }
+
+    .editable.placeholder {
+      color: rgba(230,217,197,0.35);
+    }
+
+    .small-note {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 3px;
+    }
+
+    /* Weather block */
+    .weather-main {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .weather-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .weather-icon::before {
+      content: "";
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.7);
+    }
+
+    .weather-temp {
+      font-size: 24px;
+      font-family: "Georgia", serif;
+    }
+
+    .weather-detail {
+      font-size: 12px;
+      color: var(--text-dim);
+      text-align: center;
+    }
+
+    /* Checklist styles */
+    .checklist {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .check-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 2px;
+      border-radius: 8px;
+      transition: background 0.2s ease, opacity 0.2s ease;
+    }
+
+    .check-item.completed {
+      background: rgba(0,0,0,0.22);
+      opacity: 0.75;
+    }
+
+    .check-item input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      border-radius: 5px;
+      border: 2px solid var(--gold);
+      background: transparent;
+      appearance: none;
+      -webkit-appearance: none;
+      position: relative;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+
+    .check-item input[type="checkbox"]:checked {
+      background: var(--gold);
+    }
+
+    .check-item input[type="checkbox"]:checked::after {
+      content: "";
+      position: absolute;
+      left: 4px;
+      top: 1px;
+      width: 6px;
+      height: 10px;
+      border: 2px solid #2a2422;
+      border-top: 0;
+      border-left: 0;
+      transform: rotate(45deg);
+    }
+
+    .check-item .label {
+      font-size: 14px;
+      color: var(--text-main);
+      outline: none;
+      flex: 1;
+      white-space: pre-wrap;
+    }
+
+    .check-item.completed .label {
+      text-decoration: line-through;
+      color: rgba(230,217,197,0.32);
+    }
+
+    .check-item .label[contenteditable="true"]:empty::before {
+      content: "Tap to edit";
+      color: rgba(230,217,197,0.35);
+    }
+
+    .add-btn {
+      margin-top: 6px;
+      align-self: flex-start;
+      background: transparent;
+      border-radius: 999px;
+      border: 1px solid var(--gold-soft);
+      color: var(--gold);
+      padding: 3px 10px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .add-btn:active {
+      background: rgba(191,162,122,0.22);
+    }
+
+    .bullet-list {
+      font-size: 14px;
+      color: var(--text-main);
+      line-height: 1.4;
+      padding-left: 16px;
+      outline: none;
+      white-space: pre-wrap;
+      cursor: text;
+    }
+
+    .bullet-list::marker {
+      color: var(--gold);
+    }
+
+    .sleep-box {
+      font-size: 13px;
+      color: var(--text-dim);
+      line-height: 1.4;
+    }
+
+    .footer {
+      font-size: 11px;
+      color: var(--text-dim);
+      text-align: center;
+    }
+
+    @media (max-width: 1024px) {
+      .columns {
+        grid-template-columns: 1fr;
+      }
+      .column + .column {
+        border-left: none;
+        border-top: 1px solid var(--divider);
+      }
+      .header {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .date, .time {
+        text-align: left;
+      }
+      .header-right {
+        align-items: flex-start;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- HEADER: date above big time, status pill + ring on the side -->
+  <div class="header">
+    <div class="header-left">
+      <div id="date" class="date serif">Tuesday, December 2</div>
+      <div id="time" class="time serif">9:30pm</div>
+    </div>
+
+    <div class="header-right">
+      <div
+        class="pill serif editable"
+        contenteditable="true"
+        data-save="statusPill"
+      >
+        night rhythm · in bed by 12:30
+      </div>
+
+      <div class="progress-wrapper">
+        <svg viewBox="0 0 80 80" class="ring">
+          <circle class="ring-bg" cx="40" cy="40" r="32"></circle>
+          <circle class="ring-progress" cx="40" cy="40" r="32"></circle>
+          <text x="40" y="43" class="ring-text">0/0</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- THREE COLUMN LAYOUT -->
+  <div class="columns">
+
+    <!-- COLUMN 1: Weather + Notes -->
+    <div class="column">
+      <!-- Weather -->
+      <div class="section">
+        <div class="section-title serif">Today’s Weather</div>
+
+        <div class="weather-main">
+          <div class="weather-icon"></div>
+
+          <div class="editable weather-temp serif" data-save="weatherTemp">
+65°F
+          </div>
+          <div class="editable weather-detail" data-save="weatherRange">
+34°F / 89°F · bring a light coat
+          </div>
+        </div>
+      </div>
+
+      <div class="hline"></div>
+
+      <!-- Notes -->
+      <div class="section">
+        <div class="section-title serif">Notes</div>
+        <div
+          class="editable"
+          style="min-height: 80px;"
+          data-save="notes"
+        >
+Anything you want to remember for later tonight or tomorrow.
+        </div>
+      </div>
+    </div>
+
+    <!-- COLUMN 2: Daily To Do + Monthly Focus -->
+    <div class="column">
+      <!-- Daily To Do -->
+      <div class="section">
+        <div class="section-title serif">Daily To-Do</div>
+
+        <div class="checklist" data-save="dailyTasks">
+          <div class="check-item">
+            <input type="checkbox" />
+            <span class="label" contenteditable="true">9am–2pm shift @ MOTW</span>
+          </div>
+          <div class="check-item">
+            <input type="checkbox" />
+            <span class="label" contenteditable="true">Return CVS items</span>
+          </div>
+          <div class="check-item">
+            <input type="checkbox" />
+            <span class="label" contenteditable="true">Call Wellstar</span>
+          </div>
+        </div>
+
+        <button class="add-btn" data-target="dailyTasks">+ Add task</button>
+      </div>
+
+      <div class="hline"></div>
+
+      <!-- Monthly Focus -->
+      <div class="section">
+        <div class="section-title serif">Monthly Focus</div>
+        <div
+          class="editable"
+          style="min-height: 70px;"
+          data-save="monthlyFocus"
+        >
+• Apply to jobs
+• Plants
+• Sewing
+        </div>
+      </div>
+    </div>
+
+    <!-- COLUMN 3: Daily Habits + Recent Sleep -->
+    <div class="column">
+      <!-- Daily Habits -->
+      <div class="section">
+        <div class="section-title serif">Daily Habits</div>
+
+        <div class="checklist" data-save="dailyHabits">
+          <div class="check-item">
+            <input type="checkbox" />
+            <span class="label" contenteditable="true">Nightly Istikhara</span>
+          </div>
+          <div class="check-item">
+            <input type="checkbox" />
+            <span class="label" contenteditable="true">Workout</span>
+          </div>
+          <div class="check-item">
+            <input type="checkbox" />
+            <span class="label" contenteditable="true">Quran</span>
+          </div>
+        </div>
+
+        <button class="add-btn" data-target="dailyHabits">+ Add habit</button>
+      </div>
+
+      <div class="hline"></div>
+
+      <!-- Recent Sleep Quality (simple summary box for now) -->
+      <div class="section">
+        <div class="section-title serif">Recent Sleep Quality</div>
+        <div class="sleep-box editable" data-save="sleepSummary">
+Log how the last few nights felt (hours, restfulness, any patterns you notice).
+        </div>
+        <div class="small-note">
+          Later we can attach a real chart from your sleep tracker if you want.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Tap any text to edit · checklists auto-save · ring fills as you complete tasks & habits ✨
+  </div>
+
+  <script>
+    // Time & date
+    function updateTime() {
+      const now = new Date();
+      const timeEl = document.getElementById("time");
+      const dateEl = document.getElementById("date");
+
+      const hours = now.getHours();
+      const minutes = String(now.getMinutes()).padStart(2, "0");
+      const displayHours = hours % 12 || 12;
+      const ampm = hours < 12 ? "am" : "pm";
+
+      timeEl.textContent = `${displayHours}:${minutes} ${ampm}`;
+
+      const options = { weekday: "long", month: "long", day: "numeric" };
+      dateEl.textContent = now.toLocaleDateString(undefined, options);
+    }
+
+    // Editable text fields (non-checklist)
+    function loadEditableFields() {
+      document.querySelectorAll(".editable[data-save]").forEach((el) => {
+        const key = "dash_" + el.dataset.save;
+        const saved = localStorage.getItem(key);
+        if (saved !== null && saved !== undefined) {
+          el.textContent = saved;
+          el.classList.remove("placeholder");
+        }
+      });
+    }
+
+    function attachEditableSaveListeners() {
+      document.querySelectorAll(".editable[data-save]").forEach((el) => {
+        const key = "dash_" + el.dataset.save;
+        el.addEventListener("input", () => {
+          localStorage.setItem(key, el.textContent);
+          el.classList.remove("placeholder");
+        });
+      });
+    }
+
+    // Checklist helpers
+    const RING_CIRC = 2 * Math.PI * 32;
+
+    function applyChecklistStyles() {
+      document.querySelectorAll(".check-item").forEach((item) => {
+        const cb = item.querySelector('input[type="checkbox"]');
+        if (!cb) return;
+        if (cb.checked) item.classList.add("completed");
+        else item.classList.remove("completed");
+      });
+    }
+
+    function updateProgressRing() {
+      const boxes = document.querySelectorAll(
+        '.checklist[data-save="dailyTasks"] input[type="checkbox"], ' +
+        '.checklist[data-save="dailyHabits"] input[type="checkbox"]'
+      );
+      const total = boxes.length;
+      let checked = 0;
+      boxes.forEach((cb) => { if (cb.checked) checked++; });
+
+      const progress = total ? checked / total : 0;
+      const offset = RING_CIRC * (1 - progress);
+
+      const ring = document.querySelector(".ring-progress");
+      const text = document.querySelector(".ring-text");
+
+      if (ring) ring.style.strokeDashoffset = offset;
+      if (text) text.textContent = total ? `${checked}/${total}` : "0/0";
+    }
+
+    function saveChecklist(listEl) {
+      const key = "dash_" + listEl.dataset.save;
+      const items = [];
+      listEl.querySelectorAll(".check-item").forEach((item) => {
+        const cb = item.querySelector('input[type="checkbox"]');
+        const label = item.querySelector(".label");
+        if (!label) return;
+        const text = (label.textContent || "").trim();
+        if (text === "") {
+          // skip empty rows
+          return;
+        }
+        items.push({
+          label: text,
+          checked: cb && cb.checked
+        });
+      });
+      localStorage.setItem(key, JSON.stringify(items));
+      applyChecklistStyles();
+      updateProgressRing();
+    }
+
+    function loadChecklists() {
+      document.querySelectorAll(".checklist[data-save]").forEach((listEl) => {
+        const key = "dash_" + listEl.dataset.save;
+        const saved = localStorage.getItem(key);
+        if (saved) {
+          try {
+            const items = JSON.parse(saved);
+            listEl.innerHTML = "";
+            items.forEach((item) => {
+              const wrap = document.createElement("div");
+              wrap.className = "check-item";
+
+              const cb = document.createElement("input");
+              cb.type = "checkbox";
+              cb.checked = !!item.checked;
+
+              const label = document.createElement("span");
+              label.className = "label";
+              label.contentEditable = "true";
+              label.textContent = item.label || "";
+
+              wrap.appendChild(cb);
+              wrap.appendChild(label);
+              listEl.appendChild(wrap);
+            });
+          } catch (e) {
+            console.error("Failed to load checklist", key, e);
+          }
+        }
+      });
+
+      applyChecklistStyles();
+      updateProgressRing();
+    }
+
+    function attachChecklistListeners() {
+      document.querySelectorAll(".checklist[data-save]").forEach((listEl) => {
+        // Save when checkbox changes
+        listEl.addEventListener("change", (e) => {
+          if (e.target.matches('input[type="checkbox"]')) {
+            saveChecklist(listEl);
+          }
+        });
+        // Save when text changes, remove empty rows
+        listEl.addEventListener("input", (e) => {
+          if (e.target.classList.contains("label")) {
+            const label = e.target;
+            const parent = label.closest(".check-item");
+            if (label.textContent.trim() === "") {
+              parent.remove();
+            }
+            saveChecklist(listEl);
+          }
+        });
+      });
+    }
+
+    function attachAddButtons() {
+      document.querySelectorAll(".add-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const target = btn.dataset.target;
+          const listEl = document.querySelector(
+            `.checklist[data-save="${target}"]`
+          );
+          if (!listEl) return;
+
+          const wrap = document.createElement("div");
+          wrap.className = "check-item";
+
+          const cb = document.createElement("input");
+          cb.type = "checkbox";
+
+          const label = document.createElement("span");
+          label.className = "label";
+          label.contentEditable = "true";
+          label.textContent = "";
+
+          wrap.appendChild(cb);
+          wrap.appendChild(label);
+          listEl.appendChild(wrap);
+
+          label.focus();
+          saveChecklist(listEl);
+        });
+      });
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      updateTime();
+      setInterval(updateTime, 10000);
+
+      loadEditableFields();
+      attachEditableSaveListeners();
+
+      loadChecklists();
+      attachChecklistListeners();
+      attachAddButtons();
+      updateProgressRing();
+    });
+  </script>
+
+</body>
+</html>
