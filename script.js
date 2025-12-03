@@ -70,13 +70,14 @@ function computeOverallCompletionRatio() {
 
 
 function updateProgressRing() {
-  const progress = computeTodoCompletionRatio();
+  const progress = computeOverallCompletionRatio();
   const offset = RING_CIRC * (1 - progress);
 
   const ring = document.querySelector(".ring-progress");
   const text = document.querySelector(".ring-text");
   const boxes = document.querySelectorAll(
-    '.checklist[data-save="dailyTasks"] input[type="checkbox"]'
+    '.checklist[data-save="dailyTasks"] input[type="checkbox"], ' +
+    '.checklist[data-save="dailyHabits"] input[type="checkbox"]'
   );
   const total = boxes.length;
   let checked = 0;
@@ -87,6 +88,7 @@ function updateProgressRing() {
   if (ring) ring.style.strokeDashoffset = offset;
   if (text) text.textContent = total ? `${checked}/${total}` : "0/0";
 }
+
 
 function saveChecklist(listEl) {
   const key = "dash_" + listEl.dataset.save;
@@ -296,7 +298,7 @@ function initDailyRollover() {
 
     if (current !== stored) {
       // New day.
-      const completion = computeTodoCompletionRatio();
+      const completion = computeOverallCompletionRatio();
       logDayCompletion(stored, completion);
 
       // Reset Daily Tasks only.
