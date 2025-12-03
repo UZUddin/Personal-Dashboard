@@ -13,188 +13,180 @@
 </head>
 
 <body>
+  <div class="app-shell">
+    <!-- HEADER: date above big time + progress ring -->
+    <div class="header">
+      <div class="header-left">
+        <div id="date" class="date serif"></div>
+        <div id="time" class="time serif"></div>
+      </div>
 
-  <!-- HEADER: date above big time + progress ring -->
-  <div class="header">
-    <div class="header-left">
-      <div id="date" class="date serif"></div>
-      <div id="time" class="time serif"></div>
-    </div>
-
-    <div class="header-right">
-      <div class="progress-wrapper">
-        <svg viewBox="0 0 80 80" class="ring">
-          <circle class="ring-bg" cx="40" cy="40" r="32"></circle>
-          <circle class="ring-progress" cx="40" cy="40" r="32"></circle>
-          <text x="40" y="43" class="ring-text">0/0</text>
-        </svg>
+      <div class="header-right">
+        <div class="progress-wrapper">
+          <svg viewBox="0 0 80 80" class="ring">
+            <circle class="ring-bg" cx="40" cy="40" r="32"></circle>
+            <circle class="ring-progress" cx="40" cy="40" r="32"></circle>
+            <text x="40" y="43" class="ring-text">0/0</text>
+          </svg>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- THREE COLUMN LAYOUT -->
-  <div class="columns">
+    <!-- THREE COLUMN LAYOUT -->
+    <div class="columns">
 
-    <!-- COLUMN 1: Weather + Notes -->
-    <div class="column">
-      <!-- Weather -->
-      <div class="section">
-        <div class="section-title serif">Today’s Weather</div>
+      <!-- COLUMN 1: Weather + Notes -->
+      <div class="column">
+        <!-- Weather -->
+        <div class="section">
+          <div class="section-title serif">Today’s Weather</div>
 
-        <div class="weather-main">
-          <div class="weather-icon"></div>
+          <div class="weather-main">
+            <div class="weather-icon"></div>
 
-          <div class="editable weather-temp serif" data-save="weatherTemp" contenteditable="true">
+            <div class="editable weather-temp serif" data-save="weatherTemp" contenteditable="true">
 65°F
-          </div>
-          <div class="editable weather-detail" data-save="weatherRange" contenteditable="true">
+            </div>
+            <div class="editable weather-detail" data-save="weatherRange" contenteditable="true">
 34°F / 89°F · bring a light coat!
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="hline"></div>
+        <div class="hline"></div>
 
-      <!-- Notes -->
-      <div class="section">
-        <div class="section-title serif">Notes</div>
-        <div
-          class="editable"
-          style="min-height: 80px;"
-          data-save="notes"
-          contenteditable="true"
-        >
+        <!-- Notes -->
+        <div class="section">
+          <div class="section-title serif">Notes</div>
+          <div
+            class="editable"
+            style="min-height: 80px;"
+            data-save="notes"
+            contenteditable="true"
+          >
 Anything you want to remember for later tonight or tomorrow.
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- COLUMN 2: Monthly Focus + Daily To Do -->
-    <div class="column">
-      <!-- Daily Habits -->
-      <div class="section">
-        <div class="section-title serif">Daily Habits</div>
+      <!-- COLUMN 2: Monthly Focus + Daily To Do -->
+      <div class="column">
+        <!-- Daily Habits -->
+        <div class="section">
+          <div class="section-title serif">Daily Habits</div>
 
-        <div class="checklist" data-save="dailyHabits">
-          <div class="check-item">
-            <input type="checkbox" />
-            <span class="label" contenteditable="true">Nightly Istikhara</span>
+          <div class="checklist" data-save="dailyHabits">
+            <div class="check-item">
+              <input type="checkbox" />
+              <span class="label" contenteditable="true">Nightly Istikhara</span>
+            </div>
+            <div class="check-item">
+              <input type="checkbox" />
+              <span class="label" contenteditable="true">Workout</span>
+            </div>
+            <div class="check-item">
+              <input type="checkbox" />
+              <span class="label" contenteditable="true">Quran</span>
+            </div>
           </div>
-          <div class="check-item">
-            <input type="checkbox" />
-            <span class="label" contenteditable="true">Workout</span>
-          </div>
-          <div class="check-item">
-            <input type="checkbox" />
-            <span class="label" contenteditable="true">Quran</span>
-          </div>
+
+          <button class="add-btn" data-target="dailyHabits">+ Add habit</button>
         </div>
 
-        <button class="add-btn" data-target="dailyHabits">+ Add habit</button>
+        <div class="hline"></div>
+
+        <!-- Daily To Do -->
+        <div class="section">
+          <div class="section-title serif">Daily To-Do</div>
+
+          <div class="checklist" data-save="dailyTasks">
+            <div class="check-item">
+              <input type="checkbox" />
+              <span class="label" contenteditable="true">9am–2pm shift @ MOTW</span>
+            </div>
+            <div class="check-item">
+              <input type="checkbox" />
+              <span class="label" contenteditable="true">Return CVS items</span>
+            </div>
+            <div class="check-item">
+              <input type="checkbox" />
+              <span class="label" contenteditable="true">Call Wellstar</span>
+            </div>
+          </div>
+
+          <button class="add-btn" data-target="dailyTasks">+ Add task</button>
+        </div>
+
+        <!-- <div class="hline"></div>-->
+        <!-- Tomorrow To-Do -->
+        <div class="section">
+          <div class="section-title serif">Tomorrow</div>
+          <div class="section-subtitle">
+            Add tasks that should show up in tomorrow’s Daily To-Do.
+          </div>
+
+          <div class="checklist" data-save="tomorrowTasks">
+            <!-- starts empty; you add items with the button below -->
+          </div>
+
+          <button class="add-btn" data-target="tomorrowTasks">+ Add for tomorrow</button>
+        </div>
+
+        <div class="hline"></div>
       </div>
 
-      <div class="hline"></div>
+      <!-- COLUMN 3: Habits + Sleep + Prayer + Consistency -->
+      <div class="column">
 
-      <!-- Daily To Do -->
-      <div class="section">
-        <div class="section-title serif">Daily To-Do</div>
-
-        <div class="checklist" data-save="dailyTasks">
-          <div class="check-item">
-            <input type="checkbox" />
-            <span class="label" contenteditable="true">9am–2pm shift @ MOTW</span>
-          </div>
-          <div class="check-item">
-            <input type="checkbox" />
-            <span class="label" contenteditable="true">Return CVS items</span>
-          </div>
-          <div class="check-item">
-            <input type="checkbox" />
-            <span class="label" contenteditable="true">Call Wellstar</span>
-          </div>
-        </div>
-
-        <button class="add-btn" data-target="dailyTasks">+ Add task</button>
-      </div>
-
-     <!-- <div class="hline"></div>-->
-      <!-- Tomorrow To-Do -->
-      <div class="section">
-        <div class="section-title serif">Tomorrow</div>
-        <div class="section-subtitle">
-          Add tasks that should show up in tomorrow’s Daily To-Do.
-        </div>
-
-        <div class="checklist" data-save="tomorrowTasks">
-          <!-- starts empty; you add items with the button below -->
-        </div>
-
-        <button class="add-btn" data-target="tomorrowTasks">+ Add for tomorrow</button>
-      </div>
-
-<div class="hline"></div>
-
-
-
-
-
-
-
-    </div>
-
-
-
-    <!-- COLUMN 3: Habits + Sleep + Prayer + Consistency -->
-    <div class="column">
-
-      <!-- Monthly Focus -->
-      <div class="section">
-        <div class="section-title serif">Monthly Focus</div>
-        <div
-          class="editable stealth-edit"
-          style="min-height: 70px;"
-          data-save="monthlyFocus"
-          contenteditable="true"
-        >
+        <!-- Monthly Focus -->
+        <div class="section">
+          <div class="section-title serif">Monthly Focus</div>
+          <div
+            class="editable stealth-edit"
+            style="min-height: 70px;"
+            data-save="monthlyFocus"
+            contenteditable="true"
+          >
 • Apply to jobs
 • Plants
 • Sewing
+          </div>
         </div>
-      </div>
 
-      <div class="hline"></div>
+        <div class="hline"></div>
 
-      <!-- Prayer Times -->
-      <div class="section">
-        <div class="section-title serif">Prayer Times</div>
-        <div class="section-subtitle" id="prayerLocationLabel">
-          Today
+        <!-- Prayer Times -->
+        <div class="section">
+          <div class="section-title serif">Prayer Times</div>
+          <div class="section-subtitle" id="prayerLocationLabel">
+            Today
+          </div>
+          <div id="prayerTimes" class="prayer-list small-note">
+            Loading prayer times…
+          </div>
         </div>
-        <div id="prayerTimes" class="prayer-list small-note">
-          Loading prayer times…
-        </div>
-      </div>
 
-      <div class="hline"></div>
+        <div class="hline"></div>
 
-      <!-- Consistency Monitor -->
-      <div class="section">
-        <div class="section-title serif">Consistency Monitor</div>
-        <div class="section-subtitle">
-          Tasks + habits completion over time.
-        </div>
-        <div id="consistencyChartWrapper">
-          <div id="consistencyChart"></div>
-          <div id="consistencyEmpty" class="small-note">
-            Once you start checking things off, your history will appear here.
+        <!-- Consistency Monitor -->
+        <div class="section">
+          <div class="section-title serif">Consistency Monitor</div>
+          <div class="section-subtitle">
+            Tasks + habits completion over time.
+          </div>
+          <div id="consistencyChartWrapper">
+            <div id="consistencyChart"></div>
+            <div id="consistencyEmpty" class="small-note">
+              Once you start checking things off, your history will appear here.
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <div class="footer">
-    Daily To-Do resets at midnight · Habits, notes & focus stay until you change them · Ring + chart = tasks + habits ✨
+    <div class="footer">
+      Daily To-Do resets at midnight · Habits, notes & focus stay until you change them · Ring + chart = tasks + habits ✨
+    </div>
   </div>
 
   <script src="script.js"></script>

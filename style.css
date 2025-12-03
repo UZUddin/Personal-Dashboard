@@ -27,6 +27,16 @@ body {
   gap: 18px;
 }
 
+.app-shell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
 .serif {
   font-family: "Georgia", "Times New Roman", serif;
   letter-spacing: 0.4px;
@@ -371,4 +381,14 @@ body {
   .header-right {
     align-items: flex-start;
   }
+}
+
+
+/* Tomorrow To-Do: hide checkboxes, keep same layout */
+.checklist[data-save="tomorrowTasks"] .check-item input[type="checkbox"] {
+  display: none;
+}
+
+.checklist[data-save="tomorrowTasks"] .check-item {
+  padding-left: 0;
 }
