@@ -71,19 +71,26 @@ Anything you want to remember for later tonight or tomorrow.
 
     <!-- COLUMN 2: Monthly Focus + Daily To Do -->
     <div class="column">
-      <!-- Monthly Focus -->
+      <!-- Daily Habits -->
       <div class="section">
-        <div class="section-title serif">Monthly Focus</div>
-        <div
-          class="editable stealth-edit"
-          style="min-height: 70px;"
-          data-save="monthlyFocus"
-          contenteditable="true"
-        >
-• Apply to jobs
-• Plants
-• Sewing
+        <div class="section-title serif">Daily Habits</div>
+
+        <div class="checklist" data-save="dailyHabits">
+          <div class="check-item">
+            <input type="checkbox" />
+            <span class="label" contenteditable="true">Nightly Istikhara</span>
+          </div>
+          <div class="check-item">
+            <input type="checkbox" />
+            <span class="label" contenteditable="true">Workout</span>
+          </div>
+          <div class="check-item">
+            <input type="checkbox" />
+            <span class="label" contenteditable="true">Quran</span>
+          </div>
         </div>
+
+        <button class="add-btn" data-target="dailyHabits">+ Add habit</button>
       </div>
 
       <div class="hline"></div>
@@ -111,19 +118,24 @@ Anything you want to remember for later tonight or tomorrow.
       </div>
 
      <!-- <div class="hline"></div>-->
-    <!-- Tomorrow To-Do -->
-    <div class="section">
-      <div class="section-title serif">Tomorrow</div>
-      <div class="section-subtitle">
-        Add tasks that should show up in tomorrow’s Daily To-Do.
+      <!-- Tomorrow To-Do -->
+      <div class="section">
+        <div class="section-title serif">Tomorrow</div>
+        <div class="section-subtitle">
+          Add tasks that should show up in tomorrow’s Daily To-Do.
+        </div>
+
+        <div class="checklist" data-save="tomorrowTasks">
+          <!-- starts empty; you add items with the button below -->
+        </div>
+
+        <button class="add-btn" data-target="tomorrowTasks">+ Add for tomorrow</button>
       </div>
 
-      <div class="checklist" data-save="tomorrowTasks">
-        <!-- starts empty; you add items with the button below -->
-      </div>
+<div class="hline"></div>
 
-      <button class="add-btn" data-target="tomorrowTasks">+ Add for tomorrow</button>
-    </div>
+
+
 
 
 
@@ -134,35 +146,19 @@ Anything you want to remember for later tonight or tomorrow.
 
     <!-- COLUMN 3: Habits + Sleep + Prayer + Consistency -->
     <div class="column">
-      <!-- Daily Habits -->
+
+      <!-- Monthly Focus -->
       <div class="section">
-        <div class="section-title serif">Daily Habits</div>
-
-        <div class="checklist" data-save="dailyHabits">
-          <div class="check-item">
-            <input type="checkbox" />
-            <span class="label" contenteditable="true">Nightly Istikhara</span>
-          </div>
-          <div class="check-item">
-            <input type="checkbox" />
-            <span class="label" contenteditable="true">Workout</span>
-          </div>
-          <div class="check-item">
-            <input type="checkbox" />
-            <span class="label" contenteditable="true">Quran</span>
-          </div>
-        </div>
-
-        <button class="add-btn" data-target="dailyHabits">+ Add habit</button>
-      </div>
-
-      <div class="hline"></div>
-
-      <!-- Recent Sleep Quality -->
-      <div class="section">
-        <div class="section-title serif">Recent Sleep Quality</div>
-        <div class="sleep-box editable" data-save="sleepSummary" contenteditable="true">
-Log how the last few nights felt (hours, restfulness, any patterns you notice).
+        <div class="section-title serif">Monthly Focus</div>
+        <div
+          class="editable stealth-edit"
+          style="min-height: 70px;"
+          data-save="monthlyFocus"
+          contenteditable="true"
+        >
+• Apply to jobs
+• Plants
+• Sewing
         </div>
       </div>
 
