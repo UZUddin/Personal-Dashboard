@@ -80,22 +80,6 @@
       gap: 8px;
     }
 
-    .pill {
-      padding: 7px 14px;
-      border-radius: 999px;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid var(--gold-soft);
-      color: var(--gold);
-      font-size: 13px;
-      letter-spacing: 0.5px;
-      font-family: "Georgia", serif;
-      max-width: 220px;
-      text-align: right;
-      outline: none;
-      white-space: pre-wrap;
-      cursor: text;
-    }
-
     /* PROGRESS RING */
     .progress-wrapper {
       width: 56px;
@@ -139,7 +123,7 @@
       flex: 1;
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 0; /* we'll use borders instead of gaps to mimic your mockup */
+      gap: 0;
       background: rgba(0,0,0,0.18);
       border-radius: 18px;
       border: 1px solid var(--border);
@@ -324,24 +308,24 @@
       background: rgba(191,162,122,0.22);
     }
 
-    .bullet-list {
-      font-size: 14px;
-      color: var(--text-main);
+    .sleep-box {
+      font-size: 13px;
+      color: var(--text-dim);
       line-height: 1.4;
-      padding-left: 16px;
       outline: none;
       white-space: pre-wrap;
       cursor: text;
     }
 
-    .bullet-list::marker {
-      color: var(--gold);
+    /* Consistency chart */
+    #consistencyChartWrapper {
+      margin-top: 4px;
     }
 
-    .sleep-box {
-      font-size: 13px;
-      color: var(--text-dim);
-      line-height: 1.4;
+    #consistencyChart svg {
+      width: 100%;
+      height: 80px;
+      display: block;
     }
 
     .footer {
@@ -374,7 +358,7 @@
 
 <body>
 
-  <!-- HEADER: date above big time, status pill + ring on the side -->
+  <!-- HEADER: date above big time + progress ring -->
   <div class="header">
     <div class="header-left">
       <div id="date" class="date serif">Tuesday, December 2</div>
@@ -382,14 +366,6 @@
     </div>
 
     <div class="header-right">
-      <div
-        class="pill serif editable"
-        contenteditable="true"
-        data-save="statusPill"
-      >
-        night rhythm · in bed by 12:30
-      </div>
-
       <div class="progress-wrapper">
         <svg viewBox="0 0 80 80" class="ring">
           <circle class="ring-bg" cx="40" cy="40" r="32"></circle>
@@ -416,7 +392,7 @@
 65°F
           </div>
           <div class="editable weather-detail" data-save="weatherRange">
-34°F / 89°F · bring a light coat
+34°F / 89°F · bring a light coat!
           </div>
         </div>
       </div>
@@ -477,7 +453,7 @@ Anything you want to remember for later tonight or tomorrow.
       </div>
     </div>
 
-    <!-- COLUMN 3: Daily Habits + Recent Sleep -->
+    <!-- COLUMN 3: Daily Habits + Recent Sleep + Consistency Monitor -->
     <div class="column">
       <!-- Daily Habits -->
       <div class="section">
@@ -503,25 +479,42 @@ Anything you want to remember for later tonight or tomorrow.
 
       <div class="hline"></div>
 
-      <!-- Recent Sleep Quality (simple summary box for now) -->
+      <!-- Recent Sleep Quality -->
       <div class="section">
         <div class="section-title serif">Recent Sleep Quality</div>
         <div class="sleep-box editable" data-save="sleepSummary">
 Log how the last few nights felt (hours, restfulness, any patterns you notice).
         </div>
-        <div class="small-note">
-          Later we can attach a real chart from your sleep tracker if you want.
+      </div>
+
+      <div class="hline"></div>
+
+      <!-- Consistency Monitor -->
+      <div class="section">
+        <div class="section-title serif">Consistency Monitor</div>
+        <div class="section-subtitle">
+          Daily To-Do completion over time.
+        </div>
+        <div id="consistencyChartWrapper">
+          <div id="consistencyChart"></div>
+          <div id="consistencyEmpty" class="small-note">
+            Once you start checking off Daily To-Do items, your history will appear here.
+          </div>
         </div>
       </div>
     </div>
   </div>
 
   <div class="footer">
-    Tap any text to edit · checklists auto-save · ring fills as you complete tasks & habits ✨
+    Daily To-Do resets at midnight · Habits & notes stay until you change them · Ring + chart show To-Do completion ✨
   </div>
 
   <script>
-    // Time & date
+    const RING_CIRC = 2 * Math.PI * 32;
+    const DAY_KEY = "dash_lastDayKey";
+    const CONSISTENCY_KEY = "dash_consistencyHistory";
+
+    // ---------- TIME & DATE ----------
     function updateTime() {
       const now = new Date();
       const timeEl = document.getElementById("time");
@@ -538,7 +531,11 @@ Log how the last few nights felt (hours, restfulness, any patterns you notice).
       dateEl.textContent = now.toLocaleDateString(undefined, options);
     }
 
-    // Editable text fields (non-checklist)
+    function getDayString(date = new Date()) {
+      return date.toISOString().slice(0, 10); // YYYY-MM-DD
+    }
+
+    // ---------- EDITABLE FIELDS ----------
     function loadEditableFields() {
       document.querySelectorAll(".editable[data-save]").forEach((el) => {
         const key = "dash_" + el.dataset.save;
@@ -560,9 +557,7 @@ Log how the last few nights felt (hours, restfulness, any patterns you notice).
       });
     }
 
-    // Checklist helpers
-    const RING_CIRC = 2 * Math.PI * 32;
-
+    // ---------- CHECKLIST HELPERS ----------
     function applyChecklistStyles() {
       document.querySelectorAll(".check-item").forEach((item) => {
         const cb = item.querySelector('input[type="checkbox"]');
@@ -572,20 +567,30 @@ Log how the last few nights felt (hours, restfulness, any patterns you notice).
       });
     }
 
-    function updateProgressRing() {
+    function computeTodoCompletionRatio() {
       const boxes = document.querySelectorAll(
-        '.checklist[data-save="dailyTasks"] input[type="checkbox"], ' +
-        '.checklist[data-save="dailyHabits"] input[type="checkbox"]'
+        '.checklist[data-save="dailyTasks"] input[type="checkbox"]'
       );
       const total = boxes.length;
       let checked = 0;
-      boxes.forEach((cb) => { if (cb.checked) checked++; });
+      boxes.forEach((cb) => {
+        if (cb.checked) checked++;
+      });
+      return total ? checked / total : 0;
+    }
 
-      const progress = total ? checked / total : 0;
+    function updateProgressRing() {
+      const progress = computeTodoCompletionRatio();
       const offset = RING_CIRC * (1 - progress);
 
       const ring = document.querySelector(".ring-progress");
       const text = document.querySelector(".ring-text");
+      const boxes = document.querySelectorAll(
+        '.checklist[data-save="dailyTasks"] input[type="checkbox"]'
+      );
+      const total = boxes.length;
+      let checked = 0;
+      boxes.forEach((cb) => { if (cb.checked) checked++; });
 
       if (ring) ring.style.strokeDashoffset = offset;
       if (text) text.textContent = total ? `${checked}/${total}` : "0/0";
@@ -600,12 +605,11 @@ Log how the last few nights felt (hours, restfulness, any patterns you notice).
         if (!label) return;
         const text = (label.textContent || "").trim();
         if (text === "") {
-          // skip empty rows
-          return;
+          return; // skip empty rows
         }
         items.push({
           label: text,
-          checked: cb && cb.checked
+          checked: cb && cb.checked,
         });
       });
       localStorage.setItem(key, JSON.stringify(items));
@@ -650,13 +654,11 @@ Log how the last few nights felt (hours, restfulness, any patterns you notice).
 
     function attachChecklistListeners() {
       document.querySelectorAll(".checklist[data-save]").forEach((listEl) => {
-        // Save when checkbox changes
         listEl.addEventListener("change", (e) => {
           if (e.target.matches('input[type="checkbox"]')) {
             saveChecklist(listEl);
           }
         });
-        // Save when text changes, remove empty rows
         listEl.addEventListener("input", (e) => {
           if (e.target.classList.contains("label")) {
             const label = e.target;
@@ -700,6 +702,122 @@ Log how the last few nights felt (hours, restfulness, any patterns you notice).
       });
     }
 
+    function resetDailyTasks() {
+      const listEl = document.querySelector('.checklist[data-save="dailyTasks"]');
+      if (!listEl) return;
+      listEl.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+        cb.checked = false;
+      });
+      saveChecklist(listEl);
+    }
+
+    // ---------- CONSISTENCY HISTORY & CHART ----------
+    function getConsistencyHistory() {
+      const raw = localStorage.getItem(CONSISTENCY_KEY);
+      if (!raw) return [];
+      try {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr)) return arr;
+      } catch (e) {
+        console.error("Bad consistency history", e);
+      }
+      return [];
+    }
+
+    function saveConsistencyHistory(history) {
+      localStorage.setItem(CONSISTENCY_KEY, JSON.stringify(history));
+    }
+
+    function logDayCompletion(dateStr, value) {
+      const history = getConsistencyHistory();
+      const idx = history.findIndex((h) => h.date === dateStr);
+      const val = Math.max(0, Math.min(1, value || 0));
+      if (idx >= 0) {
+        history[idx].value = val;
+      } else {
+        history.push({ date: dateStr, value: val });
+      }
+      saveConsistencyHistory(history);
+      renderConsistencyChart();
+    }
+
+    function renderConsistencyChart() {
+      const container = document.getElementById("consistencyChart");
+      const emptyMsg = document.getElementById("consistencyEmpty");
+      if (!container) return;
+
+      const history = getConsistencyHistory();
+      if (!history.length) {
+        container.innerHTML = "";
+        if (emptyMsg) emptyMsg.style.display = "block";
+        return;
+      }
+
+      if (emptyMsg) emptyMsg.style.display = "none";
+
+      const width = 200;
+      const height = 80;
+      const paddingX = 12;
+      const paddingTop = 15;
+      const paddingBottom = 18;
+      const innerWidth = width - paddingX * 2;
+      const innerHeight = height - paddingTop - paddingBottom;
+
+      const n = history.length;
+      const step = n > 1 ? innerWidth / (n - 1) : 0;
+
+      let points = "";
+      let circles = "";
+
+      history.forEach((item, i) => {
+        const x =
+          paddingX + (n > 1 ? i * step : innerWidth / 2);
+        const v = Math.max(0, Math.min(1, item.value || 0));
+        const y = paddingTop + (1 - v) * innerHeight;
+        points += `${x},${y} `;
+        circles += `<circle cx="${x}" cy="${y}" r="2" fill="${"#bfa27a"}"/>`;
+      });
+
+      const baseline = `<line x1="${paddingX}" y1="${paddingTop +
+        innerHeight}" x2="${paddingX +
+        innerWidth}" y2="${paddingTop +
+        innerHeight}" stroke="rgba(255,255,255,0.25)" stroke-width="0.5"/>`;
+
+      const polyline = `<polyline points="${points.trim()}" fill="none" stroke="${"#bfa27a"}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+
+      container.innerHTML = `<svg viewBox="0 0 ${width} ${height}">${baseline}${polyline}${circles}</svg>`;
+    }
+
+    // ---------- MIDNIGHT ROLLOVER ----------
+    function initDailyRollover() {
+      const today = getDayString();
+      let lastDay = localStorage.getItem(DAY_KEY);
+      if (!lastDay) {
+        localStorage.setItem(DAY_KEY, today);
+        lastDay = today;
+      }
+
+      // Simple timer: check once a minute whether date changed
+      setInterval(() => {
+        const now = new Date();
+        const current = getDayString(now);
+        const stored = localStorage.getItem(DAY_KEY) || current;
+
+        if (current !== stored) {
+          // We've crossed into a new day.
+          // Log completion for the previous day based on To-Do ring.
+          const completion = computeTodoCompletionRatio();
+          logDayCompletion(stored, completion);
+
+          // Reset Daily Tasks only.
+          resetDailyTasks();
+
+          // Update lastDay key to today.
+          localStorage.setItem(DAY_KEY, current);
+        }
+      }, 60000);
+    }
+
     document.addEventListener("DOMContentLoaded", () => {
       updateTime();
       setInterval(updateTime, 10000);
@@ -710,7 +828,9 @@ Log how the last few nights felt (hours, restfulness, any patterns you notice).
       loadChecklists();
       attachChecklistListeners();
       attachAddButtons();
-      updateProgressRing();
+
+      renderConsistencyChart();
+      initDailyRollover();
     });
   </script>
 
