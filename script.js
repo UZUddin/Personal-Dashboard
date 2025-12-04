@@ -128,10 +128,12 @@ function onCalendarAuthClick() {
     return;
   }
   const token = gapi.client.getToken();
-  if (!token) {
+  const hasDrive = token && token.scope && token.scope.includes("drive.appdata");
+  if (!token || !hasDrive) {
     calendarTokenClient.requestAccessToken({ prompt: "consent" });
   } else {
     listUpcomingEvents();
+    loadStateFromCloud();
   }
 }
 
@@ -351,6 +353,12 @@ function applyStateFromSync(state) {
 }
 
 async function loadStateFromCloud() {
+  const token = gapi.client.getToken && gapi.client.getToken();
+  const hasDrive = token && token.scope && token.scope.includes("drive.appdata");
+  if (!hasDrive) {
+    setSyncStatus("Sync needs Drive access. Reconnect and accept Drive.");
+    return;
+  }
   try {
     const res = await gapi.client.drive.files.list({
       spaces: "appDataFolder",
@@ -379,6 +387,12 @@ async function loadStateFromCloud() {
 async function saveStateToCloud() {
   if (!calendarConfigReady() || !gapi.client || !gapi.client.drive) {
     setSyncStatus("Sync unavailable.");
+    return;
+  }
+  const token = gapi.client.getToken && gapi.client.getToken();
+  const hasDrive = token && token.scope && token.scope.includes("drive.appdata");
+  if (!hasDrive) {
+    setSyncStatus("Sync needs Drive access. Reconnect and accept Drive.");
     return;
   }
   const payload = getLocalStateForSync();
@@ -418,7 +432,11 @@ async function saveStateToCloud() {
         });
       } catch (err) {
         const msg = (err && err.result && err.result.error && err.result.error.reason) || "";
-        if (err.status === 403 || err.status === 404 || msg === "insufficientFilePermissions") {
+        if (
+          err.status === 403 ||
+          err.status === 404 ||
+          msg === "insufficientFilePermissions"
+        ) {
           await createFile();
         } else {
           throw err;
@@ -430,7 +448,11 @@ async function saveStateToCloud() {
     setSyncStatus("Synced.");
   } catch (err) {
     console.error("Save sync failed", err);
-    setSyncStatus("Sync save failed.");
+    if (err.status === 403) {
+      setSyncStatus("Sync needs Drive access. Reconnect and accept Drive.");
+    } else {
+      setSyncStatus("Sync save failed.");
+    }
   }
 }
 
