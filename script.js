@@ -19,7 +19,7 @@ const GOOGLE_DISCOVERY_DOCS = [
   "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest",
 ];
 const GOOGLE_SCOPES =
-  "https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/drive.appdata";
+  "https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/drive.file";
 const WEATHER_ICON_KIND = {
   SUNNY: "sunny",
   CLOUDY: "cloudy",
@@ -361,7 +361,6 @@ async function loadStateFromCloud() {
   }
   try {
     const res = await gapi.client.drive.files.list({
-      spaces: "appDataFolder",
       q: `name='${SYNC_FILE_NAME}' and trashed=false`,
       pageSize: 1,
       fields: "files(id, name)",
@@ -415,7 +414,6 @@ async function saveStateToCloud() {
     await gapi.client.drive.files.create({
       resource: {
         name: SYNC_FILE_NAME,
-        parents: ["appDataFolder"],
       },
       uploadType: "media",
       media: {
@@ -428,7 +426,6 @@ async function saveStateToCloud() {
 
   try {
     const res = await gapi.client.drive.files.list({
-      spaces: "appDataFolder",
       q: `name='${SYNC_FILE_NAME}' and trashed=false`,
       pageSize: 1,
       fields: "files(id, name)",
@@ -824,6 +821,20 @@ function renderConsistencyChart() {
   container.innerHTML = `<svg viewBox="0 0 ${width} ${height}">${baseline}${bars}</svg>`;
 }
 
+function seedSampleConsistency() {
+  const history = getConsistencyHistory();
+  if (history.length) return;
+  const samples = [0.7, 0.6, 0.8];
+  const today = new Date();
+  const seeded = samples.map((val, idx) => {
+    const d = new Date(today);
+    d.setDate(d.getDate() - (samples.length - idx));
+    return { date: getDayString(d), value: val };
+  });
+  saveConsistencyHistory(seeded);
+  scheduleSyncSave();
+}
+
 function formatTo12Hour(timeStr) {
   if (!timeStr) return "";
   const match = timeStr.match(/(\d{1,2}):(\d{2})/);
@@ -948,6 +959,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   initCalendarUI();
 
+  seedSampleConsistency();
   renderConsistencyChart();
   initDailyRollover();
 
