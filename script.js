@@ -382,6 +382,21 @@ async function saveStateToCloud() {
     return;
   }
   const payload = getLocalStateForSync();
+  const createFile = async () => {
+    await gapi.client.drive.files.create({
+      resource: {
+        name: SYNC_FILE_NAME,
+        parents: ["appDataFolder"],
+      },
+      uploadType: "media",
+      media: {
+        mimeType: "application/json",
+        body: JSON.stringify(payload),
+      },
+      fields: "id",
+    });
+  };
+
   try {
     const res = await gapi.client.drive.files.list({
       spaces: "appDataFolder",
@@ -392,27 +407,25 @@ async function saveStateToCloud() {
     const file = res.result.files && res.result.files[0];
 
     if (file) {
-      await gapi.client.drive.files.update({
-        fileId: file.id,
-        uploadType: "media",
-        media: {
-          mimeType: "application/json",
-          body: JSON.stringify(payload),
-        },
-      });
+      try {
+        await gapi.client.drive.files.update({
+          fileId: file.id,
+          uploadType: "media",
+          media: {
+            mimeType: "application/json",
+            body: JSON.stringify(payload),
+          },
+        });
+      } catch (err) {
+        const msg = (err && err.result && err.result.error && err.result.error.reason) || "";
+        if (err.status === 403 || err.status === 404 || msg === "insufficientFilePermissions") {
+          await createFile();
+        } else {
+          throw err;
+        }
+      }
     } else {
-      await gapi.client.drive.files.create({
-        resource: {
-          name: SYNC_FILE_NAME,
-          parents: ["appDataFolder"],
-        },
-        uploadType: "media",
-        media: {
-          mimeType: "application/json",
-          body: JSON.stringify(payload),
-        },
-        fields: "id",
-      });
+      await createFile();
     }
     setSyncStatus("Synced.");
   } catch (err) {
@@ -754,14 +767,14 @@ function renderConsistencyChart() {
   const innerHeight = height - paddingTop - paddingBottom;
 
   const n = history.length;
-  const step = n ? innerWidth / n : 0;
-  const barWidth = Math.max(6, step * 0.6);
+  const gap = n > 1 ? 4 : 0;
+  const barWidth = n ? Math.max(8, (innerWidth - gap * (n - 1)) / n) : 0;
 
   let bars = "";
   history.forEach((item, i) => {
     const v = Math.max(0, Math.min(1, item.value || 0));
     const barHeight = v * innerHeight;
-    const x = paddingX + i * step + (step - barWidth) / 2;
+    const x = paddingX + i * (barWidth + gap);
     const y = paddingTop + (innerHeight - barHeight);
     bars += `<rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" rx="2" fill="#bfa27a" opacity="0.9"/>`;
   });
