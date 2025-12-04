@@ -8,6 +8,7 @@ const CONSISTENCY_KEY = "dash_consistencyHistory";
 const CALENDAR_AUTH_KEY = "dash_calendarAuthed";
 const CALENDAR_HIDDEN_KEY = "dash_calendarHiddenEvents";
 const SYNC_FILE_NAME = "dashboard-state.json";
+const SYNC_FILE_ID_KEY = "dash_syncFileId";
 const SYNC_STATUS_KEY = "dash_lastSyncStatus";
 // Google Calendar settings — replace the placeholders with your own keys
 const GOOGLE_CLIENT_ID =
@@ -58,12 +59,14 @@ function initCalendarUI() {
   const connectBtn = document.getElementById("calendarAuthButton");
   const signOutBtn = document.getElementById("calendarSignOut");
   const statusEl = document.getElementById("calendarStatus");
+  const syncBtn = document.getElementById("syncNowButton");
 
-  if (!connectBtn || !signOutBtn || !statusEl) return;
+  if (!connectBtn || !signOutBtn || !statusEl || !syncBtn) return;
 
   if (!calendarConfigReady()) {
     connectBtn.disabled = true;
     signOutBtn.disabled = true;
+    syncBtn.disabled = true;
     statusEl.textContent =
       "Add your Google client ID and API key in script.js to enable.";
     return;
@@ -71,6 +74,7 @@ function initCalendarUI() {
 
   connectBtn.addEventListener("click", onCalendarAuthClick);
   signOutBtn.addEventListener("click", onCalendarSignOut);
+  syncBtn.addEventListener("click", onManualSync);
   statusEl.textContent = "Connect to pull the next few events.";
 }
 
@@ -128,7 +132,7 @@ function onCalendarAuthClick() {
     return;
   }
   const token = gapi.client.getToken();
-  const hasDrive = token && token.scope && token.scope.includes("drive.appdata");
+  const hasDrive = token && token.scope && token.scope.includes("drive.file");
   if (!token || !hasDrive) {
     calendarTokenClient.requestAccessToken({ prompt: "consent" });
   } else {
@@ -145,6 +149,7 @@ function onCalendarSignOut() {
   }
   localStorage.removeItem(CALENDAR_AUTH_KEY);
   localStorage.removeItem(SYNC_STATUS_KEY);
+  localStorage.removeItem(SYNC_FILE_ID_KEY);
   const list = document.getElementById("calendarEvents");
   if (list) list.innerHTML = "";
   setCalendarStatus("Signed out. Connect to load events.");
@@ -293,7 +298,8 @@ function setSyncStatus(text) {
 function updateCalendarButtons() {
   const connectBtn = document.getElementById("calendarAuthButton");
   const signOutBtn = document.getElementById("calendarSignOut");
-  if (!connectBtn || !signOutBtn) return;
+  const syncBtn = document.getElementById("syncNowButton");
+  if (!connectBtn || !signOutBtn || !syncBtn) return;
 
   const hasToken =
     typeof gapi !== "undefined" &&
@@ -303,6 +309,8 @@ function updateCalendarButtons() {
 
   connectBtn.textContent = hasToken ? "Refresh events" : "Connect calendar";
   signOutBtn.style.display = hasToken ? "inline-flex" : "none";
+  syncBtn.style.display = hasToken ? "inline-flex" : "none";
+  syncBtn.disabled = !hasToken;
 }
 
 function attemptSilentCalendarAuth() {
@@ -320,6 +328,21 @@ function attemptSilentCalendarAuth() {
 
   calendarTriedSilent = true;
   calendarTokenClient.requestAccessToken({ prompt: "" });
+}
+
+function onManualSync() {
+  if (!calendarGapiReady || !calendarGisReady) {
+    setSyncStatus("Sync unavailable until Google loads.");
+    return;
+  }
+  const token = gapi.client.getToken && gapi.client.getToken();
+  const hasDrive = token && token.scope && token.scope.includes("drive.file");
+  if (!token || !hasDrive) {
+    setSyncStatus("Connect and accept Drive to sync.");
+    return;
+  }
+  setSyncStatus("Syncing…");
+  saveStateToCloud();
 }
 
 // ---------- CLOUD SYNC (Drive appData) ----------
@@ -354,18 +377,33 @@ function applyStateFromSync(state) {
 
 async function loadStateFromCloud() {
   const token = gapi.client.getToken && gapi.client.getToken();
-  const hasDrive = token && token.scope && token.scope.includes("drive.appdata");
+  const hasDrive = token && token.scope && token.scope.includes("drive.file");
   if (!hasDrive) {
     setSyncStatus("Sync needs Drive access. Reconnect and accept Drive.");
     return;
   }
   try {
-    const res = await gapi.client.drive.files.list({
-      q: `name='${SYNC_FILE_NAME}' and trashed=false`,
-      pageSize: 1,
-      fields: "files(id, name)",
-    });
-    const file = res.result.files && res.result.files[0];
+    let fileId = localStorage.getItem(SYNC_FILE_ID_KEY) || null;
+    let file = null;
+    if (fileId) {
+      try {
+        const res = await gapi.client.drive.files.get({ fileId, fields: "id, name" });
+        file = res.result;
+      } catch (err) {
+        file = null;
+      }
+    }
+    if (!file) {
+      const res = await gapi.client.drive.files.list({
+        q: `name='${SYNC_FILE_NAME}' and trashed=false`,
+        pageSize: 1,
+        fields: "files(id, name)",
+      });
+      file = res.result.files && res.result.files[0];
+      if (file && file.id) {
+        localStorage.setItem(SYNC_FILE_ID_KEY, file.id);
+      }
+    }
     if (!file) {
       setSyncStatus("No sync file yet. Saving your data...");
       await saveStateToCloud();
@@ -404,14 +442,14 @@ async function saveStateToCloud() {
     return;
   }
   const token = gapi.client.getToken && gapi.client.getToken();
-  const hasDrive = token && token.scope && token.scope.includes("drive.appdata");
+  const hasDrive = token && token.scope && token.scope.includes("drive.file");
   if (!hasDrive) {
     setSyncStatus("Sync needs Drive access. Reconnect and accept Drive.");
     return;
   }
   const payload = getLocalStateForSync();
   const createFile = async () => {
-    await gapi.client.drive.files.create({
+    const res = await gapi.client.drive.files.create({
       resource: {
         name: SYNC_FILE_NAME,
       },
@@ -422,17 +460,37 @@ async function saveStateToCloud() {
       },
       fields: "id",
     });
+    if (res && res.result && res.result.id) {
+      localStorage.setItem(SYNC_FILE_ID_KEY, res.result.id);
+      return res.result.id;
+    }
+    return null;
   };
 
   try {
-    const res = await gapi.client.drive.files.list({
-      q: `name='${SYNC_FILE_NAME}' and trashed=false`,
-      pageSize: 1,
-      fields: "files(id, name)",
-    });
-    const file = res.result.files && res.result.files[0];
+    let fileId = localStorage.getItem(SYNC_FILE_ID_KEY) || null;
+    let file = null;
+    if (fileId) {
+      try {
+        const res = await gapi.client.drive.files.get({ fileId, fields: "id, name" });
+        file = res.result;
+      } catch (err) {
+        file = null;
+      }
+    }
+    if (!file) {
+      const res = await gapi.client.drive.files.list({
+        q: `name='${SYNC_FILE_NAME}' and trashed=false`,
+        pageSize: 1,
+        fields: "files(id, name)",
+      });
+      file = res.result.files && res.result.files[0];
+      if (file && file.id) {
+        localStorage.setItem(SYNC_FILE_ID_KEY, file.id);
+      }
+    }
 
-    if (file) {
+    if (file && file.id) {
       try {
         await gapi.client.drive.files.update({
           fileId: file.id,
@@ -449,13 +507,16 @@ async function saveStateToCloud() {
           err.status === 404 ||
           msg === "insufficientFilePermissions"
         ) {
-          await createFile();
+          fileId = await createFile();
         } else {
           throw err;
         }
       }
     } else {
-      await createFile();
+      fileId = await createFile();
+    }
+    if (fileId) {
+      await cleanupOldSyncFiles(fileId);
     }
     setSyncStatus("Synced.");
   } catch (err) {
@@ -475,6 +536,29 @@ function scheduleSyncSave() {
   syncPendingSave = setTimeout(() => {
     saveStateToCloud();
   }, 1200);
+}
+
+async function cleanupOldSyncFiles(keepId) {
+  if (!keepId || !gapi.client || !gapi.client.drive) return;
+  try {
+    const res = await gapi.client.drive.files.list({
+      q: `name='${SYNC_FILE_NAME}' and trashed=false`,
+      orderBy: "modifiedTime desc",
+      pageSize: 10,
+      fields: "files(id)",
+    });
+    const files = (res.result && res.result.files) || [];
+    for (const f of files) {
+      if (!f.id || f.id === keepId) continue;
+      try {
+        await gapi.client.drive.files.delete({ fileId: f.id });
+      } catch (err) {
+        console.error("Failed to delete old sync file", err);
+      }
+    }
+  } catch (err) {
+    console.error("Cleanup old sync files failed", err);
+  }
 }
 
 function buildEventInstanceKey(event) {
@@ -784,6 +868,7 @@ function renderConsistencyChart() {
   if (!container) return;
 
   const history = getConsistencyHistory();
+  history.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
   if (!history.length) {
     container.innerHTML = "";
     if (emptyMsg) emptyMsg.style.display = "block";
@@ -792,23 +877,24 @@ function renderConsistencyChart() {
 
   if (emptyMsg) emptyMsg.style.display = "none";
 
-  const width = 200;
-  const height = 80;
-  const paddingX = 12;
+  const width = 220;
+  const height = 120;
+  const paddingX = 24;
   const paddingTop = 12;
-  const paddingBottom = 20;
+  const paddingBottom = 28;
   const innerWidth = width - paddingX * 2;
   const innerHeight = height - paddingTop - paddingBottom;
 
   const n = history.length;
-  const gap = n > 1 ? 4 : 0;
-  const barWidth = n ? Math.max(8, (innerWidth - gap * (n - 1)) / n) : 0;
+  const step = n ? innerWidth / n : innerWidth;
+  const barWidth = n ? Math.min(18, Math.max(8, step * 0.4)) : 0;
+  const gap = n > 1 ? Math.max(4, step - barWidth) : 0;
 
   let bars = "";
   history.forEach((item, i) => {
     const v = Math.max(0, Math.min(1, item.value || 0));
     const barHeight = v * innerHeight;
-    const x = paddingX + i * (barWidth + gap);
+    const x = paddingX + i * step + (step - barWidth) / 2;
     const y = paddingTop + (innerHeight - barHeight);
     bars += `<rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" rx="2" fill="#bfa27a" opacity="0.9"/>`;
   });
