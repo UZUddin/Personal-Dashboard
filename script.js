@@ -748,23 +748,22 @@ function renderConsistencyChart() {
   const width = 200;
   const height = 80;
   const paddingX = 12;
-  const paddingTop = 15;
-  const paddingBottom = 18;
+  const paddingTop = 12;
+  const paddingBottom = 20;
   const innerWidth = width - paddingX * 2;
   const innerHeight = height - paddingTop - paddingBottom;
 
   const n = history.length;
-  const step = n > 1 ? innerWidth / (n - 1) : 0;
+  const step = n ? innerWidth / n : 0;
+  const barWidth = Math.max(6, step * 0.6);
 
-  let points = "";
-  let circles = "";
-
+  let bars = "";
   history.forEach((item, i) => {
-    const x = paddingX + (n > 1 ? i * step : innerWidth / 2);
     const v = Math.max(0, Math.min(1, item.value || 0));
-    const y = paddingTop + (1 - v) * innerHeight;
-    points += `${x},${y} `;
-    circles += `<circle cx="${x}" cy="${y}" r="2" fill="#bfa27a"/>`;
+    const barHeight = v * innerHeight;
+    const x = paddingX + i * step + (step - barWidth) / 2;
+    const y = paddingTop + (innerHeight - barHeight);
+    bars += `<rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" rx="2" fill="#bfa27a" opacity="0.9"/>`;
   });
 
   const baseline = `<line x1="${paddingX}" y1="${paddingTop +
@@ -772,9 +771,7 @@ function renderConsistencyChart() {
     innerWidth}" y2="${paddingTop +
     innerHeight}" stroke="rgba(255,255,255,0.25)" stroke-width="0.5"/>`;
 
-  const polyline = `<polyline points="${points.trim()}" fill="none" stroke="#bfa27a" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>`;
-
-  container.innerHTML = `<svg viewBox="0 0 ${width} ${height}">${baseline}${polyline}${circles}</svg>`;
+  container.innerHTML = `<svg viewBox="0 0 ${width} ${height}">${baseline}${bars}</svg>`;
 }
 
 function formatTo12Hour(timeStr) {
