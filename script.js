@@ -7,6 +7,8 @@ const DAY_KEY = "dash_lastDayKey";
 const CONSISTENCY_KEY = "dash_consistencyHistory";
 const CALENDAR_AUTH_KEY = "dash_calendarAuthed";
 const CALENDAR_HIDDEN_KEY = "dash_calendarHiddenEvents";
+const SYNC_FILE_NAME = "dashboard-state.json";
+const SYNC_STATUS_KEY = "dash_lastSyncStatus";
 // Google Calendar settings — replace the placeholders with your own keys
 const GOOGLE_CLIENT_ID =
   cfgStr(DASH_CONFIG.GOOGLE_CLIENT_ID) || "SET_GOOGLE_CLIENT_ID.apps.googleusercontent.com";
@@ -14,8 +16,10 @@ const GOOGLE_API_KEY = cfgStr(DASH_CONFIG.GOOGLE_API_KEY) || "SET_GOOGLE_API_KEY
 const GOOGLE_CALENDAR_ID = "primary";
 const GOOGLE_DISCOVERY_DOCS = [
   "https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest",
+  "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest",
 ];
-const GOOGLE_SCOPES = "https://www.googleapis.com/auth/calendar.readonly";
+const GOOGLE_SCOPES =
+  "https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/drive.appdata";
 const WEATHER_ICON_KIND = {
   SUNNY: "sunny",
   CLOUDY: "cloudy",
@@ -39,6 +43,7 @@ let calendarTokenClient = null;
 let calendarGapiReady = false;
 let calendarGisReady = false;
 let calendarTriedSilent = false;
+let syncPendingSave = null;
 
 function calendarConfigReady() {
   return (
@@ -87,6 +92,7 @@ async function initializeGapiClient() {
   } catch (err) {
     console.error("Google API init failed", err);
     setCalendarStatus("Couldn’t load Google API. Check your API key.");
+    setSyncStatus("Sync unavailable (API load failed).");
   }
 }
 
@@ -106,6 +112,7 @@ function gisLoaded() {
       localStorage.setItem(CALENDAR_AUTH_KEY, "1");
       setCalendarStatus("Loading events…");
       await listUpcomingEvents();
+      await loadStateFromCloud();
       updateCalendarButtons();
     },
   });
@@ -135,9 +142,11 @@ function onCalendarSignOut() {
     gapi.client.setToken("");
   }
   localStorage.removeItem(CALENDAR_AUTH_KEY);
+  localStorage.removeItem(SYNC_STATUS_KEY);
   const list = document.getElementById("calendarEvents");
   if (list) list.innerHTML = "";
   setCalendarStatus("Signed out. Connect to load events.");
+  setSyncStatus("");
   updateCalendarButtons();
 }
 
@@ -270,6 +279,15 @@ function setCalendarStatus(text) {
   statusEl.style.display = msg ? "block" : "none";
 }
 
+function setSyncStatus(text) {
+  const statusEl = document.getElementById("syncStatus");
+  if (!statusEl) return;
+  const msg = (text || "").trim();
+  statusEl.textContent = msg;
+  statusEl.style.display = msg ? "block" : "none";
+  if (msg) localStorage.setItem(SYNC_STATUS_KEY, msg);
+}
+
 function updateCalendarButtons() {
   const connectBtn = document.getElementById("calendarAuthButton");
   const signOutBtn = document.getElementById("calendarSignOut");
@@ -300,6 +318,116 @@ function attemptSilentCalendarAuth() {
 
   calendarTriedSilent = true;
   calendarTokenClient.requestAccessToken({ prompt: "" });
+}
+
+// ---------- CLOUD SYNC (Drive appData) ----------
+function getLocalStateForSync() {
+  const data = {};
+  Object.keys(localStorage).forEach((k) => {
+    if (k.startsWith("dash_")) {
+      data[k] = localStorage.getItem(k);
+    }
+  });
+  return {
+    version: 1,
+    updatedAt: new Date().toISOString(),
+    data,
+  };
+}
+
+function applyStateFromSync(state) {
+  if (!state || !state.data) return;
+  Object.entries(state.data).forEach(([k, v]) => {
+    try {
+      localStorage.setItem(k, v);
+    } catch (e) {
+      console.error("Failed to set key from sync", k, e);
+    }
+  });
+  loadEditableFields();
+  loadChecklists();
+  renderConsistencyChart();
+  updateProgressRing();
+}
+
+async function loadStateFromCloud() {
+  try {
+    const res = await gapi.client.drive.files.list({
+      spaces: "appDataFolder",
+      q: `name='${SYNC_FILE_NAME}' and trashed=false`,
+      pageSize: 1,
+      fields: "files(id, name)",
+    });
+    const file = res.result.files && res.result.files[0];
+    if (!file) {
+      setSyncStatus("No sync file yet. Saving your data...");
+      await saveStateToCloud();
+      return;
+    }
+    const content = await gapi.client.drive.files.get({
+      fileId: file.id,
+      alt: "media",
+    });
+    applyStateFromSync(content.result);
+    setSyncStatus("Synced from cloud.");
+  } catch (err) {
+    console.error("Load sync failed", err);
+    setSyncStatus("Sync failed to load.");
+  }
+}
+
+async function saveStateToCloud() {
+  if (!calendarConfigReady() || !gapi.client || !gapi.client.drive) {
+    setSyncStatus("Sync unavailable.");
+    return;
+  }
+  const payload = getLocalStateForSync();
+  try {
+    const res = await gapi.client.drive.files.list({
+      spaces: "appDataFolder",
+      q: `name='${SYNC_FILE_NAME}' and trashed=false`,
+      pageSize: 1,
+      fields: "files(id, name)",
+    });
+    const file = res.result.files && res.result.files[0];
+
+    if (file) {
+      await gapi.client.drive.files.update({
+        fileId: file.id,
+        uploadType: "media",
+        media: {
+          mimeType: "application/json",
+          body: JSON.stringify(payload),
+        },
+      });
+    } else {
+      await gapi.client.drive.files.create({
+        resource: {
+          name: SYNC_FILE_NAME,
+          parents: ["appDataFolder"],
+        },
+        uploadType: "media",
+        media: {
+          mimeType: "application/json",
+          body: JSON.stringify(payload),
+        },
+        fields: "id",
+      });
+    }
+    setSyncStatus("Synced.");
+  } catch (err) {
+    console.error("Save sync failed", err);
+    setSyncStatus("Sync save failed.");
+  }
+}
+
+function scheduleSyncSave() {
+  if (syncPendingSave) {
+    clearTimeout(syncPendingSave);
+  }
+  syncPendingSave = setTimeout(() => {
+    saveStateToCloud();
+  }, 1200);
 }
 
 function buildEventInstanceKey(event) {
@@ -374,6 +502,7 @@ function attachEditableSaveListeners() {
       const value = isNotesField(el) ? el.innerText : el.textContent;
       localStorage.setItem(key, value);
       el.classList.remove("placeholder");
+      scheduleSyncSave();
     });
   });
 }
@@ -457,6 +586,7 @@ function saveChecklist(listEl) {
   localStorage.setItem(key, JSON.stringify(items));
   applyChecklistStyles();
   updateProgressRing();
+  scheduleSyncSave();
 }
 
 function loadChecklists() {
@@ -555,6 +685,15 @@ function attachAddButtons() {
 
 function resetDailyTasks() {
   const listEl = document.querySelector('.checklist[data-save="dailyTasks"]');
+  if (!listEl) return;
+  listEl.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+    cb.checked = false;
+  });
+  saveChecklist(listEl);
+}
+
+function resetDailyHabits() {
+  const listEl = document.querySelector('.checklist[data-save="dailyHabits"]');
   if (!listEl) return;
   listEl.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
     cb.checked = false;
@@ -738,9 +877,11 @@ function initDailyRollover() {
       //  - add everything from Tomorrow To-Do
       //  - clear Tomorrow list
       rolloverTasksToNextDay();
+      resetDailyHabits();
 
       // Update lastDay key to the new day
       localStorage.setItem(DAY_KEY, current);
+      scheduleSyncSave();
     }
 
   }, 60000);
@@ -767,6 +908,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   initWeatherUI();
   initWeatherAutoRefresh();
+
+  const cachedSyncStatus = localStorage.getItem(SYNC_STATUS_KEY);
+  if (cachedSyncStatus) setSyncStatus(cachedSyncStatus);
 });
 
 // Raw access to checklist data in localStorage (by id like "dailyTasks")
