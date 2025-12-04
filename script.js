@@ -372,12 +372,27 @@ async function loadStateFromCloud() {
       await saveStateToCloud();
       return;
     }
-    const content = await gapi.client.drive.files.get({
-      fileId: file.id,
-      alt: "media",
-    });
-    applyStateFromSync(content.result);
-    setSyncStatus("Synced from cloud.");
+    try {
+      const content = await gapi.client.drive.files.get({
+        fileId: file.id,
+        alt: "media",
+      });
+      applyStateFromSync(content.result);
+      setSyncStatus("Synced from cloud.");
+    } catch (err) {
+      console.error("Load sync file failed", err);
+      if (err.status === 403 || err.status === 404) {
+        try {
+          await gapi.client.drive.files.delete({ fileId: file.id });
+        } catch (e) {
+          console.error("Failed to delete stale sync file", e);
+        }
+        setSyncStatus("Recreating sync file…");
+        await saveStateToCloud();
+      } else {
+        setSyncStatus("Sync load failed.");
+      }
+    }
   } catch (err) {
     console.error("Load sync failed", err);
     setSyncStatus("Sync failed to load.");
