@@ -429,6 +429,7 @@ function getLocalStateForSync() {
 
 function applyStateFromSync(state) {
   if (!state || !state.data) return;
+  clearLocalStateForSync();
   Object.entries(state.data).forEach(([k, v]) => {
     try {
       localStorage.setItem(k, v);
@@ -440,6 +441,21 @@ function applyStateFromSync(state) {
   loadChecklists();
   renderConsistencyChart();
   updateProgressRing();
+}
+
+function clearLocalStateForSync() {
+  const keep = new Set([
+    CALENDAR_AUTH_KEY,
+    SYNC_STATUS_KEY,
+    SYNC_TIME_KEY,
+    SYNC_FILE_ID_KEY,
+    CALENDAR_HIDDEN_KEY,
+  ]);
+  Object.keys(localStorage).forEach((k) => {
+    if (k.startsWith("dash_") && !keep.has(k)) {
+      localStorage.removeItem(k);
+    }
+  });
 }
 
 async function loadStateFromCloud({ suppressStatus = false, refreshUI = true } = {}) {
