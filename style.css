@@ -39,19 +39,19 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 22px;
+  gap: 32px;
   padding: 4px 4px 4px;
 }
 
 .header-left {
-  flex: 1;
+  flex: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
 .header-right {
-  flex: 1;
+  flex: 0;
   display: flex;
   flex-direction: column;
   align-items: center;

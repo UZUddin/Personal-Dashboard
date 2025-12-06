@@ -78,6 +78,8 @@ function initCalendarUI() {
   signOutBtn.addEventListener("click", onCalendarSignOut);
   pushBtn.addEventListener("click", onManualPush);
   pullBtn.addEventListener("click", onManualPull);
+  pushBtn.disabled = true;
+  pullBtn.disabled = true;
   statusEl.textContent = "Connect to pull the next few events.";
 }
 
@@ -313,8 +315,6 @@ function updateCalendarButtons() {
 
   connectBtn.textContent = hasToken ? "Refresh events" : "Connect calendar";
   signOutBtn.style.display = hasToken ? "inline-flex" : "none";
-  pushBtn.style.display = hasToken ? "inline-flex" : "none";
-  pullBtn.style.display = hasToken ? "inline-flex" : "none";
   pushBtn.disabled = !hasToken;
   pullBtn.disabled = !hasToken;
 }
@@ -352,6 +352,11 @@ function onManualPull() {
     .catch((err) => {
       console.error("Manual pull failed", err);
       setSyncStatus("Pull failed.");
+    })
+    .then((ok) => {
+      if (ok) {
+        setSyncStatus("Pulled latest.");
+      }
     });
 }
 
