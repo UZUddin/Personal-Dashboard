@@ -387,7 +387,6 @@ function onManualPull() {
       if (ok) {
         setSyncStatus("Pulled latest.");
         setLastSynced(new Date());
-        refreshUIFromLocal();
       }
     });
 }
@@ -440,7 +439,7 @@ function applyStateFromSync(state) {
   updateProgressRing();
 }
 
-async function loadStateFromCloud({ suppressStatus = false } = {}) {
+async function loadStateFromCloud({ suppressStatus = false, refreshUI = true } = {}) {
   const token = gapi.client.getToken && gapi.client.getToken();
   const hasDrive = token && token.scope && token.scope.includes("drive.file");
   if (!hasDrive) {
@@ -482,6 +481,7 @@ async function loadStateFromCloud({ suppressStatus = false } = {}) {
       applyStateFromSync(content.result);
       if (!suppressStatus) setSyncStatus("Synced from cloud.");
       setLastSynced(new Date());
+      if (refreshUI) refreshUIFromLocal();
       return true;
     } catch (err) {
       console.error("Load sync file failed", err);
