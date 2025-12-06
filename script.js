@@ -676,7 +676,7 @@ function updateTime() {
   timeEl.textContent = `${displayHours}:${minutes} ${ampm}`;
 
   const options = { weekday: "long", month: "long", day: "numeric" };
-  dateEl.textContent = now.toLocaleDateString(undefined, options);
+  dateEl.textContent = now.toLocaleDateString("en-US", options);
 }
 
 function getDayString(date = new Date()) {
