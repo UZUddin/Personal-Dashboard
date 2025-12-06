@@ -10,6 +10,7 @@ const CALENDAR_HIDDEN_KEY = "dash_calendarHiddenEvents";
 const SYNC_FILE_NAME = "dashboard-state.json";
 const SYNC_FILE_ID_KEY = "dash_syncFileId";
 const SYNC_STATUS_KEY = "dash_lastSyncStatus";
+const SYNC_TIME_KEY = "dash_lastSyncTime";
 // Google Calendar settings — replace the placeholders with your own keys
 const GOOGLE_CLIENT_ID =
   cfgStr(DASH_CONFIG.GOOGLE_CLIENT_ID) || "SET_GOOGLE_CLIENT_ID.apps.googleusercontent.com";
@@ -300,6 +301,28 @@ function setSyncStatus(text) {
   if (msg) localStorage.setItem(SYNC_STATUS_KEY, msg);
 }
 
+function setLastSynced(date) {
+  const ts =
+    date instanceof Date ? date.toISOString() : typeof date === "string" ? date : "";
+  if (!ts) return;
+  localStorage.setItem(SYNC_TIME_KEY, ts);
+  const el = document.getElementById("lastSynced");
+  if (el) {
+    const d = new Date(ts);
+    el.textContent = d.toLocaleString();
+  }
+}
+
+function loadLastSynced() {
+  const ts = localStorage.getItem(SYNC_TIME_KEY);
+  if (!ts) return;
+  const el = document.getElementById("lastSynced");
+  if (el) {
+    const d = new Date(ts);
+    el.textContent = d.toLocaleString();
+  }
+}
+
 function updateCalendarButtons() {
   const connectBtn = document.getElementById("calendarAuthButton");
   const signOutBtn = document.getElementById("calendarSignOut");
@@ -356,6 +379,7 @@ function onManualPull() {
     .then((ok) => {
       if (ok) {
         setSyncStatus("Pulled latest.");
+        setLastSynced(new Date());
       }
     });
 }
@@ -449,6 +473,7 @@ async function loadStateFromCloud({ suppressStatus = false } = {}) {
       });
       applyStateFromSync(content.result);
       if (!suppressStatus) setSyncStatus("Synced from cloud.");
+      setLastSynced(new Date());
       return true;
     } catch (err) {
       console.error("Load sync file failed", err);
@@ -554,6 +579,7 @@ async function saveStateToCloud() {
       await cleanupOldSyncFiles(fileId);
     }
     setSyncStatus("Synced.");
+    setLastSynced(new Date());
   } catch (err) {
     console.error("Save sync failed", err);
     if (err.status === 403) {
@@ -1124,6 +1150,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const cachedSyncStatus = localStorage.getItem(SYNC_STATUS_KEY);
   if (cachedSyncStatus) setSyncStatus(cachedSyncStatus);
+  loadLastSynced();
 });
 
 // Raw access to checklist data in localStorage (by id like "dailyTasks")
