@@ -483,7 +483,10 @@ async function loadStateFromCloud({
         alt: "media",
       });
       applyStateFromSync(content.result);
-      if (!suppressStatus) setSyncStatus("Pulled latest from cloud.");
+      if (!suppressStatus) {
+        const msg = reloadAfter ? "Pulled latest. Reloading…" : "Pulled latest from cloud.";
+        setSyncStatus(msg);
+      }
       setLastSynced(new Date());
       if (refreshUI) refreshUIFromLocal();
       if (reloadAfter) {
@@ -539,40 +542,16 @@ async function saveStateToCloud() {
   };
 
   try {
-    let fileId = await resolveSyncFileId();
-
-    if (fileId) {
+    const previousFileId = await resolveSyncFileId();
+    const newFileId = await createFile();
+    if (newFileId && previousFileId && previousFileId !== newFileId) {
       try {
-        await gapi.client.drive.files.update({
-          fileId,
-          resource: {
-            name: SYNC_FILE_NAME,
-            appProperties: SYNC_APP_PROPS,
-          },
-          uploadType: "media",
-          media: {
-            mimeType: "application/json",
-            body: JSON.stringify(payload),
-          },
-        });
+        await gapi.client.drive.files.delete({ fileId: previousFileId });
       } catch (err) {
-        const msg = (err && err.result && err.result.error && err.result.error.reason) || "";
-        if (
-          err.status === 403 ||
-          err.status === 404 ||
-          msg === "insufficientFilePermissions"
-        ) {
-          fileId = await createFile();
-        } else {
-          throw err;
-        }
+        console.error("Failed to delete previous sync file", err);
       }
-    } else {
-      fileId = await createFile();
     }
-    if (fileId) {
-      await cleanupOldSyncFiles(fileId);
-    }
+    if (newFileId) await cleanupOldSyncFiles(newFileId);
     setSyncStatus("Pushed to cloud.");
     setLastSynced(new Date());
   } catch (err) {
@@ -586,15 +565,7 @@ async function saveStateToCloud() {
 }
 
 async function resolveSyncFileId() {
-  let fileId = localStorage.getItem(SYNC_FILE_ID_KEY) || null;
-  if (fileId) {
-    try {
-      await gapi.client.drive.files.get({ fileId, fields: "id" });
-      return fileId;
-    } catch (e) {
-      localStorage.removeItem(SYNC_FILE_ID_KEY);
-    }
-  }
+  // Always fetch the latest by appProperties to avoid stale cached IDs
   try {
     const res = await gapi.client.drive.files.list({
       q: "appProperties has { key='app' and value='bedside-dash' } and trashed=false",
