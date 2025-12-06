@@ -37,9 +37,9 @@ body {
 /* HEADER */
 .header {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
-  gap: 18px;
+  gap: 22px;
   padding: 4px 4px 4px;
 }
 
@@ -550,12 +550,16 @@ body {
 .sync-fab {
   position: fixed;
   right: 18px;
-  bottom: 20px;
+  bottom: 18px;
   z-index: 1000;
   padding: 10px 16px;
   font-size: 13px;
   border-radius: 999px;
   box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+}
+
+.sync-fab.secondary {
+  bottom: 64px;
 }
 
 @media (max-width: 1024px) {

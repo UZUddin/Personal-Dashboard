@@ -59,14 +59,16 @@ function initCalendarUI() {
   const connectBtn = document.getElementById("calendarAuthButton");
   const signOutBtn = document.getElementById("calendarSignOut");
   const statusEl = document.getElementById("calendarStatus");
-  const syncBtn = document.getElementById("syncNowButton");
+  const pushBtn = document.getElementById("pushNowButton");
+  const pullBtn = document.getElementById("pullNowButton");
 
-  if (!connectBtn || !signOutBtn || !statusEl || !syncBtn) return;
+  if (!connectBtn || !signOutBtn || !statusEl || !pushBtn || !pullBtn) return;
 
   if (!calendarConfigReady()) {
     connectBtn.disabled = true;
     signOutBtn.disabled = true;
-    syncBtn.disabled = true;
+    pushBtn.disabled = true;
+    pullBtn.disabled = true;
     statusEl.textContent =
       "Add your Google client ID and API key in script.js to enable.";
     return;
@@ -74,7 +76,8 @@ function initCalendarUI() {
 
   connectBtn.addEventListener("click", onCalendarAuthClick);
   signOutBtn.addEventListener("click", onCalendarSignOut);
-  syncBtn.addEventListener("click", onManualSync);
+  pushBtn.addEventListener("click", onManualPush);
+  pullBtn.addEventListener("click", onManualPull);
   statusEl.textContent = "Connect to pull the next few events.";
 }
 
@@ -298,8 +301,9 @@ function setSyncStatus(text) {
 function updateCalendarButtons() {
   const connectBtn = document.getElementById("calendarAuthButton");
   const signOutBtn = document.getElementById("calendarSignOut");
-  const syncBtn = document.getElementById("syncNowButton");
-  if (!connectBtn || !signOutBtn || !syncBtn) return;
+  const pushBtn = document.getElementById("pushNowButton");
+  const pullBtn = document.getElementById("pullNowButton");
+  if (!connectBtn || !signOutBtn || !pushBtn || !pullBtn) return;
 
   const hasToken =
     typeof gapi !== "undefined" &&
@@ -309,8 +313,10 @@ function updateCalendarButtons() {
 
   connectBtn.textContent = hasToken ? "Refresh events" : "Connect calendar";
   signOutBtn.style.display = hasToken ? "inline-flex" : "none";
-  syncBtn.style.display = hasToken ? "inline-flex" : "none";
-  syncBtn.disabled = !hasToken;
+  pushBtn.style.display = hasToken ? "inline-flex" : "none";
+  pullBtn.style.display = hasToken ? "inline-flex" : "none";
+  pushBtn.disabled = !hasToken;
+  pullBtn.disabled = !hasToken;
 }
 
 function attemptSilentCalendarAuth() {
@@ -330,7 +336,7 @@ function attemptSilentCalendarAuth() {
   calendarTokenClient.requestAccessToken({ prompt: "" });
 }
 
-function onManualSync() {
+function onManualPull() {
   if (!calendarGapiReady || !calendarGisReady) {
     setSyncStatus("Sync unavailable until Google loads.");
     return;
@@ -341,8 +347,30 @@ function onManualSync() {
     setSyncStatus("Connect and accept Drive to sync.");
     return;
   }
-  setSyncStatus("Syncing…");
-  saveStateToCloud();
+  setSyncStatus("Pulling…");
+  loadStateFromCloud()
+    .catch((err) => {
+      console.error("Manual pull failed", err);
+      setSyncStatus("Pull failed.");
+    });
+}
+
+function onManualPush() {
+  if (!calendarGapiReady || !calendarGisReady) {
+    setSyncStatus("Sync unavailable until Google loads.");
+    return;
+  }
+  const token = gapi.client.getToken && gapi.client.getToken();
+  const hasDrive = token && token.scope && token.scope.includes("drive.file");
+  if (!token || !hasDrive) {
+    setSyncStatus("Connect and accept Drive to sync.");
+    return;
+  }
+  setSyncStatus("Pushing…");
+  saveStateToCloud().catch((err) => {
+    console.error("Manual push failed", err);
+    setSyncStatus("Push failed.");
+  });
 }
 
 // ---------- CLOUD SYNC (Drive appData) ----------
@@ -375,12 +403,12 @@ function applyStateFromSync(state) {
   updateProgressRing();
 }
 
-async function loadStateFromCloud() {
+async function loadStateFromCloud({ suppressStatus = false } = {}) {
   const token = gapi.client.getToken && gapi.client.getToken();
   const hasDrive = token && token.scope && token.scope.includes("drive.file");
   if (!hasDrive) {
-    setSyncStatus("Sync needs Drive access. Reconnect and accept Drive.");
-    return;
+    if (!suppressStatus) setSyncStatus("Sync needs Drive access. Reconnect and accept Drive.");
+    return false;
   }
   try {
     let fileId = localStorage.getItem(SYNC_FILE_ID_KEY) || null;
@@ -407,7 +435,7 @@ async function loadStateFromCloud() {
     if (!file) {
       setSyncStatus("No sync file yet. Saving your data...");
       await saveStateToCloud();
-      return;
+      return true;
     }
     try {
       const content = await gapi.client.drive.files.get({
@@ -415,7 +443,8 @@ async function loadStateFromCloud() {
         alt: "media",
       });
       applyStateFromSync(content.result);
-      setSyncStatus("Synced from cloud.");
+      if (!suppressStatus) setSyncStatus("Synced from cloud.");
+      return true;
     } catch (err) {
       console.error("Load sync file failed", err);
       if (err.status === 403 || err.status === 404) {
@@ -425,7 +454,7 @@ async function loadStateFromCloud() {
           console.error("Failed to delete stale sync file", e);
         }
         setSyncStatus("Recreating sync file…");
-        await saveStateToCloud();
+          await saveStateToCloud();
       } else {
         setSyncStatus("Sync load failed.");
       }
@@ -434,6 +463,7 @@ async function loadStateFromCloud() {
     console.error("Load sync failed", err);
     setSyncStatus("Sync failed to load.");
   }
+  return false;
 }
 
 async function saveStateToCloud() {
@@ -620,7 +650,7 @@ function loadEditableFields() {
     const key = "dash_" + el.dataset.save;
     const saved = localStorage.getItem(key);
     if (saved !== null && saved !== undefined) {
-      el.textContent = saved;
+      el.textContent = preserveMultiline(el, saved);
       el.classList.remove("placeholder");
     }
   });
@@ -630,7 +660,7 @@ function attachEditableSaveListeners() {
   document.querySelectorAll(".editable[data-save]").forEach((el) => {
     const key = "dash_" + el.dataset.save;
     el.addEventListener("input", () => {
-      const value = isNotesField(el) ? el.innerText : el.textContent;
+      const value = preserveMultiline(el, el.innerText || el.textContent);
       localStorage.setItem(key, value);
       el.classList.remove("placeholder");
       scheduleSyncSave();
@@ -640,6 +670,15 @@ function attachEditableSaveListeners() {
 
 function isNotesField(el) {
   return el.dataset && el.dataset.save === "notes";
+}
+
+function preserveMultiline(el, value) {
+  if (!value) return "";
+  const id = el.dataset ? el.dataset.save : "";
+  if (id === "notes" || id === "monthlyFocus") {
+    return value.replace(/\r\n/g, "\n");
+  }
+  return value;
 }
 
 // ---------- CHECKLIST HELPERS ----------
