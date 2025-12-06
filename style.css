@@ -551,16 +551,19 @@ body {
 .sync-fab {
   position: fixed;
   right: 18px;
-  bottom: 18px;
-  z-index: 1000;
-  padding: 10px 16px;
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  z-index: 2000;
+  padding: 10px 18px;
   font-size: 13px;
   border-radius: 999px;
   box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+  background: rgba(191,162,122,0.14);
+  border: 1px solid rgba(191,162,122,0.5);
+  color: #e6d9c5;
 }
 
 .sync-fab.secondary {
-  bottom: 64px;
+  bottom: calc(58px + env(safe-area-inset-bottom, 0px));
 }
 
 @media (max-width: 1024px) {
