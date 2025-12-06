@@ -526,13 +526,14 @@ async function saveStateToCloud() {
       resource: {
         name: SYNC_FILE_NAME,
         appProperties: SYNC_APP_PROPS,
+        parents: ["root"], // ensure it lands in My Drive (visible to drive.file scope)
       },
       uploadType: "multipart", // needed to ensure metadata (name/appProperties) is saved
       media: {
         mimeType: "application/json",
         body: JSON.stringify(payload),
       },
-      fields: "id,name,appProperties",
+      fields: "id,name,appProperties,modifiedTime,parents",
     });
     if (res && res.result && res.result.id) {
       localStorage.setItem(SYNC_FILE_ID_KEY, res.result.id);
@@ -544,6 +545,10 @@ async function saveStateToCloud() {
   try {
     const previousFileId = await resolveSyncFileId();
     const newFileId = await createFile();
+    if (!newFileId) {
+      setSyncStatus("Push failed to create cloud copy.");
+      return;
+    }
     if (newFileId && previousFileId && previousFileId !== newFileId) {
       try {
         await gapi.client.drive.files.delete({ fileId: previousFileId });
@@ -591,7 +596,8 @@ async function resolveSyncFileId() {
       q: "appProperties has { key='app' and value='bedside-dash' } and trashed=false",
       orderBy: "modifiedTime desc",
       pageSize: 1,
-      fields: "files(id)",
+      fields: "files(id,name,appProperties,modifiedTime,parents)",
+      spaces: "drive",
     });
     const file = res.result.files && res.result.files[0];
     if (file && file.id) {
@@ -607,7 +613,8 @@ async function resolveSyncFileId() {
       q: `name='${SYNC_FILE_NAME}' and trashed=false`,
       orderBy: "modifiedTime desc",
       pageSize: 1,
-      fields: "files(id)",
+      fields: "files(id,name,appProperties,modifiedTime,parents)",
+      spaces: "drive",
     });
     const file = res.result.files && res.result.files[0];
     if (file && file.id) {
@@ -1512,12 +1519,14 @@ window.devListSyncFiles = async function devListSyncFiles() {
       orderBy: "modifiedTime desc",
       pageSize: 5,
       fields: "files(id,name,appProperties,modifiedTime)",
+      spaces: "drive",
     });
     const byName = await gapi.client.drive.files.list({
       q: `name='${SYNC_FILE_NAME}' and trashed=false`,
       orderBy: "modifiedTime desc",
       pageSize: 5,
       fields: "files(id,name,appProperties,modifiedTime)",
+      spaces: "drive",
     });
     console.log("Sync files by appProperties", byApp.result.files);
     console.log("Sync files by name", byName.result.files);
@@ -1526,4 +1535,10 @@ window.devListSyncFiles = async function devListSyncFiles() {
     console.error("devListSyncFiles failed", err);
     return null;
   }
+};
+
+window.devCheckToken = function devCheckToken() {
+  const token = gapi.client && gapi.client.getToken ? gapi.client.getToken() : null;
+  console.log("Token scope", token && token.scope);
+  return token;
 };
