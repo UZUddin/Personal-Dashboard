@@ -11,6 +11,7 @@ const SYNC_FILE_NAME = "dashboard-state.json";
 const SYNC_FILE_ID_KEY = "dash_syncFileId";
 const SYNC_STATUS_KEY = "dash_lastSyncStatus";
 const SYNC_TIME_KEY = "dash_lastSyncTime";
+const ALLOW_AUTO_CLOUD_SYNC = false;
 // Google Calendar settings — replace the placeholders with your own keys
 const GOOGLE_CLIENT_ID =
   cfgStr(DASH_CONFIG.GOOGLE_CLIENT_ID) || "SET_GOOGLE_CLIENT_ID.apps.googleusercontent.com";
@@ -387,6 +388,8 @@ function onManualPull() {
       if (ok) {
         setSyncStatus("Pulled latest.");
         setLastSynced(new Date());
+        refreshUIFromLocal();
+        setTimeout(() => window.location.reload(), 300);
       }
     });
 }
@@ -599,6 +602,7 @@ async function saveStateToCloud() {
 }
 
 function scheduleSyncSave() {
+  if (!ALLOW_AUTO_CLOUD_SYNC) return;
   if (syncPendingSave) {
     clearTimeout(syncPendingSave);
   }
