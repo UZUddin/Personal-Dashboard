@@ -123,7 +123,6 @@ function gisLoaded() {
       localStorage.setItem(CALENDAR_AUTH_KEY, "1");
       setCalendarStatus("Loading events…");
       await listUpcomingEvents();
-      await loadStateFromCloud();
       updateCalendarButtons();
     },
   });
@@ -144,7 +143,7 @@ function onCalendarAuthClick() {
     calendarTokenClient.requestAccessToken({ prompt: "consent" });
   } else {
     listUpcomingEvents();
-    loadStateFromCloud();
+    setSyncStatus("Connected. Use Pull/Push to sync.");
   }
 }
 
