@@ -565,7 +565,27 @@ async function saveStateToCloud() {
 }
 
 async function resolveSyncFileId() {
-  // Always fetch the latest by appProperties to avoid stale cached IDs
+  // 1) Try cached ID from last push
+  const cachedId = localStorage.getItem(SYNC_FILE_ID_KEY);
+  if (cachedId) {
+    try {
+      const res = await gapi.client.drive.files.get({
+        fileId: cachedId,
+        fields: "id",
+      });
+      if (res && res.result && res.result.id) {
+        return res.result.id;
+      }
+    } catch (err) {
+      if (err && (err.status === 404 || err.status === 403)) {
+        localStorage.removeItem(SYNC_FILE_ID_KEY);
+      } else {
+        console.error("Cached sync file lookup failed", err);
+      }
+    }
+  }
+
+  // 2) Fetch the latest by appProperties to avoid stale IDs
   try {
     const res = await gapi.client.drive.files.list({
       q: "appProperties has { key='app' and value='bedside-dash' } and trashed=false",
@@ -581,7 +601,7 @@ async function resolveSyncFileId() {
   } catch (err) {
     console.error("Resolve sync file failed", err);
   }
-  // Fallback: legacy name-based file
+  // 3) Fallback: legacy name-based file
   try {
     const res = await gapi.client.drive.files.list({
       q: `name='${SYNC_FILE_NAME}' and trashed=false`,
