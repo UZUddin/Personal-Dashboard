@@ -664,6 +664,18 @@ function computeOverallCompletionRatio() {
   return total ? checked / total : 0;
 }
 
+function computeHabitsCompletionRatio() {
+  const boxes = document.querySelectorAll(
+    '.checklist[data-save="dailyHabits"] input[type="checkbox"]'
+  );
+  const total = boxes.length;
+  let checked = 0;
+  boxes.forEach((cb) => {
+    if (cb.checked) checked++;
+  });
+  return total ? checked / total : 0;
+}
+
 function updateProgressRing() {
   const progress = computeOverallCompletionRatio();
   const offset = RING_CIRC * (1 - progress);
@@ -853,10 +865,12 @@ function logDayCompletion(dateStr, value) {
   const history = getConsistencyHistory();
   const idx = history.findIndex((h) => h.date === dateStr);
   const val = Math.max(0, Math.min(1, value || 0));
+  const habits = Math.max(0, Math.min(1, computeHabitsCompletionRatio() || 0));
   if (idx >= 0) {
     history[idx].value = val;
+    history[idx].habits = habits;
   } else {
-    history.push({ date: dateStr, value: val });
+    history.push({ date: dateStr, value: val, habits });
   }
   saveConsistencyHistory(history);
   renderConsistencyChart();
@@ -893,10 +907,16 @@ function renderConsistencyChart() {
   let bars = "";
   history.forEach((item, i) => {
     const v = Math.max(0, Math.min(1, item.value || 0));
+    const h = item.habits != null ? Math.max(0, Math.min(1, item.habits)) : null;
     const barHeight = v * innerHeight;
     const x = paddingX + i * step + (step - barWidth) / 2;
     const y = paddingTop + (innerHeight - barHeight);
     bars += `<rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" rx="2" fill="#bfa27a" opacity="0.9"/>`;
+    if (h !== null && h > 0) {
+      const hHeight = Math.min(barHeight, h * innerHeight);
+      const hy = paddingTop + (innerHeight - hHeight);
+      bars += `<rect x="${x}" y="${hy}" width="${barWidth}" height="${hHeight}" rx="2" fill="#8f7a5b" opacity="0.85"/>`;
+    }
   });
 
   const baseline = `<line x1="${paddingX}" y1="${paddingTop +
@@ -910,12 +930,16 @@ function renderConsistencyChart() {
 function seedSampleConsistency() {
   const history = getConsistencyHistory();
   if (history.length) return;
-  const samples = [0.7, 0.6, 0.8];
+  const samples = [
+    { total: 0.7, habits: 0.5 },
+    { total: 0.6, habits: 0.4 },
+    { total: 0.8, habits: 0.65 },
+  ];
   const today = new Date();
   const seeded = samples.map((val, idx) => {
     const d = new Date(today);
     d.setDate(d.getDate() - (samples.length - idx));
-    return { date: getDayString(d), value: val };
+    return { date: getDayString(d), value: val.total, habits: val.habits };
   });
   saveConsistencyHistory(seeded);
   scheduleSyncSave();
