@@ -323,6 +323,13 @@ function loadLastSynced() {
   }
 }
 
+function refreshUIFromLocal() {
+  loadEditableFields();
+  loadChecklists();
+  renderConsistencyChart();
+  updateProgressRing();
+}
+
 function updateCalendarButtons() {
   const connectBtn = document.getElementById("calendarAuthButton");
   const signOutBtn = document.getElementById("calendarSignOut");
@@ -380,6 +387,7 @@ function onManualPull() {
       if (ok) {
         setSyncStatus("Pulled latest.");
         setLastSynced(new Date());
+        refreshUIFromLocal();
       }
     });
 }

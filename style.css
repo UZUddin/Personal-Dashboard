@@ -36,25 +36,25 @@ body {
 
 /* HEADER */
 .header {
-  display: flex;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 32px;
+  gap: 20px;
   padding: 4px 4px 4px;
 }
 
 .header-left {
-  flex: 0;
+  grid-column: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
 .header-right {
-  flex: 0;
+  grid-column: 3;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-end;
 }
 
 .date {
@@ -572,6 +572,7 @@ body {
     border-top: 1px solid var(--divider);
   }
   .header {
+    display: flex;
     flex-direction: column;
     align-items: stretch;
   }
@@ -580,6 +581,7 @@ body {
   }
   .header-right {
     align-items: flex-start;
+    width: 100%;
   }
 }
 
