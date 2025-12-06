@@ -527,12 +527,12 @@ async function saveStateToCloud() {
         name: SYNC_FILE_NAME,
         appProperties: SYNC_APP_PROPS,
       },
-      uploadType: "media",
+      uploadType: "multipart", // needed to ensure metadata (name/appProperties) is saved
       media: {
         mimeType: "application/json",
         body: JSON.stringify(payload),
       },
-      fields: "id",
+      fields: "id,name,appProperties",
     });
     if (res && res.result && res.result.id) {
       localStorage.setItem(SYNC_FILE_ID_KEY, res.result.id);
@@ -1462,3 +1462,20 @@ function initWeatherAutoRefresh() {
   // Refresh every 15 minutes for near real-time updates
   setInterval(fetchLiveWeather, 15 * 60 * 1000);
 }
+
+// ---------- DEV HELPERS FOR MANUAL TESTING ----------
+// Use in console for quick sanity checks:
+//   window.devDumpSyncState()  -> returns the JSON we push to Drive
+//   window.devClearLocalState() -> clears dash_* keys to mimic a fresh device (keeps auth/sync metadata)
+window.devDumpSyncState = function devDumpSyncState() {
+  return getLocalStateForSync();
+};
+
+window.devClearLocalState = function devClearLocalState() {
+  clearLocalStateForSync();
+  loadChecklists();
+  loadEditableFields();
+  renderConsistencyChart();
+  updateProgressRing();
+  setSyncStatus("Local dash_* cleared (auth/metadata kept).");
+};
