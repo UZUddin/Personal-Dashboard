@@ -1495,6 +1495,9 @@ function initWeatherAutoRefresh() {
 //   window.devDumpSyncState()  -> returns the JSON we push to Drive
 //   window.devClearLocalState() -> clears dash_* keys to mimic a fresh device (keeps auth/sync metadata)
 //   window.devListSyncFiles() -> lists files matching the sync queries to debug Drive visibility
+//   window.devCheckToken() -> logs the current token scope
+//   window.devFetchCachedFileMeta() -> fetches metadata for cached sync file ID
+//   window.devFetchCachedFileContent() -> fetches JSON for cached sync file ID
 window.devDumpSyncState = function devDumpSyncState() {
   return getLocalStateForSync();
 };
@@ -1541,4 +1544,42 @@ window.devCheckToken = function devCheckToken() {
   const token = gapi.client && gapi.client.getToken ? gapi.client.getToken() : null;
   console.log("Token scope", token && token.scope);
   return token;
+};
+
+window.devFetchCachedFileMeta = async function devFetchCachedFileMeta() {
+  const id = localStorage.getItem(SYNC_FILE_ID_KEY);
+  if (!id) {
+    console.warn("No cached sync file ID.");
+    return null;
+  }
+  try {
+    const res = await gapi.client.drive.files.get({
+      fileId: id,
+      fields: "id,name,appProperties,modifiedTime,parents",
+    });
+    console.log("Cached file metadata", res.result);
+    return res.result;
+  } catch (err) {
+    console.error("Failed to fetch cached file meta", err);
+    return null;
+  }
+};
+
+window.devFetchCachedFileContent = async function devFetchCachedFileContent() {
+  const id = localStorage.getItem(SYNC_FILE_ID_KEY);
+  if (!id) {
+    console.warn("No cached sync file ID.");
+    return null;
+  }
+  try {
+    const res = await gapi.client.drive.files.get({
+      fileId: id,
+      alt: "media",
+    });
+    console.log("Cached file content", res.result);
+    return res.result;
+  } catch (err) {
+    console.error("Failed to fetch cached file content", err);
+    return null;
+  }
 };
