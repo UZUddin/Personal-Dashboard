@@ -12,10 +12,14 @@ const SYNC_FILE_ID_KEY = "dash_syncFileId";
 const SYNC_STATUS_KEY = "dash_lastSyncStatus";
 const SYNC_TIME_KEY = "dash_lastSyncTime";
 const ALLOW_AUTO_CLOUD_SYNC = false;
+const SYNC_APP_PROPS = {
+  app: "bedside-dash",
+  type: "state",
+};
 // Google Calendar settings — replace the placeholders with your own keys
 const GOOGLE_CLIENT_ID =
-  cfgStr(DASH_CONFIG.GOOGLE_CLIENT_ID) || "SET_GOOGLE_CLIENT_ID.apps.googleusercontent.com";
-const GOOGLE_API_KEY = cfgStr(DASH_CONFIG.GOOGLE_API_KEY) || "SET_GOOGLE_API_KEY";
+  cfgStr(DASH_CONFIG.GOOGLE_CLIENT_ID) || "937730038587-2h98cjh6t1tk4i0n3r7mckibils2cb6u.apps.googleusercontent.com";
+const GOOGLE_API_KEY = cfgStr(DASH_CONFIG.GOOGLE_API_KEY) || "AIzaSyDOuPBt1SEWtvEN7ZHqB98Z6Uq2SlmlyFQ";
 const GOOGLE_CALENDAR_ID = "primary";
 const GOOGLE_DISCOVERY_DOCS = [
   "https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest",
@@ -366,7 +370,7 @@ function attemptSilentCalendarAuth() {
   calendarTokenClient.requestAccessToken({ prompt: "" });
 }
 
-function onManualPull() {
+async function onManualPull() {
   if (!calendarGapiReady || !calendarGisReady) {
     setSyncStatus("Sync unavailable until Google loads.");
     return;
@@ -378,16 +382,17 @@ function onManualPull() {
     return;
   }
   setSyncStatus("Pulling…");
-  loadStateFromCloud({ reloadAfter: true })
-    .catch((err) => {
-      console.error("Manual pull failed", err);
-      setSyncStatus("Pull failed.");
-    })
-    .then((ok) => {
-      if (ok) {
-        setSyncStatus("Pulled latest.");
-      }
-    });
+  try {
+    const ok = await loadStateFromCloud({ reloadAfter: true });
+    if (ok) {
+      setSyncStatus("Pulled latest.");
+    } else {
+      setSyncStatus("No cloud copy. Push from a device with your data.");
+    }
+  } catch (err) {
+    console.error("Manual pull failed", err);
+    setSyncStatus("Pull failed.");
+  }
 }
 
 function onManualPush() {
@@ -420,6 +425,7 @@ function getLocalStateForSync() {
     version: 1,
     updatedAt: new Date().toISOString(),
     data,
+    app: "bedside-dash",
   };
 }
 
@@ -516,6 +522,7 @@ async function saveStateToCloud() {
     const res = await gapi.client.drive.files.create({
       resource: {
         name: SYNC_FILE_NAME,
+        appProperties: SYNC_APP_PROPS,
       },
       uploadType: "media",
       media: {
@@ -538,6 +545,10 @@ async function saveStateToCloud() {
       try {
         await gapi.client.drive.files.update({
           fileId,
+          resource: {
+            name: SYNC_FILE_NAME,
+            appProperties: SYNC_APP_PROPS,
+          },
           uploadType: "media",
           media: {
             mimeType: "application/json",
@@ -586,7 +597,7 @@ async function resolveSyncFileId() {
   }
   try {
     const res = await gapi.client.drive.files.list({
-      q: `name='${SYNC_FILE_NAME}' and trashed=false`,
+      q: "appProperties has { key='app' and value='bedside-dash' } and trashed=false",
       orderBy: "modifiedTime desc",
       pageSize: 1,
       fields: "files(id)",
@@ -598,6 +609,22 @@ async function resolveSyncFileId() {
     }
   } catch (err) {
     console.error("Resolve sync file failed", err);
+  }
+  // Fallback: legacy name-based file
+  try {
+    const res = await gapi.client.drive.files.list({
+      q: `name='${SYNC_FILE_NAME}' and trashed=false`,
+      orderBy: "modifiedTime desc",
+      pageSize: 1,
+      fields: "files(id)",
+    });
+    const file = res.result.files && res.result.files[0];
+    if (file && file.id) {
+      localStorage.setItem(SYNC_FILE_ID_KEY, file.id);
+      return file.id;
+    }
+  } catch (err) {
+    console.error("Resolve legacy sync file failed", err);
   }
   return null;
 }
@@ -616,9 +643,9 @@ async function cleanupOldSyncFiles(keepId) {
   if (!keepId || !gapi.client || !gapi.client.drive) return;
   try {
     const res = await gapi.client.drive.files.list({
-      q: `name='${SYNC_FILE_NAME}' and trashed=false`,
+      q: "appProperties has { key='app' and value='bedside-dash' } and trashed=false",
       orderBy: "modifiedTime desc",
-      pageSize: 10,
+      pageSize: 50,
       fields: "files(id)",
     });
     const files = (res.result && res.result.files) || [];
@@ -630,6 +657,20 @@ async function cleanupOldSyncFiles(keepId) {
         console.error("Failed to delete old sync file", err);
       }
     }
+    // Clean up legacy untitled/unnamed JSON files created by earlier runs
+    const legacy = await gapi.client.drive.files.list({
+      q: "(name='' or name='Untitled') and mimeType='application/json' and trashed=false",
+      pageSize: 20,
+      fields: "files(id,name)",
+    });
+    (legacy.result.files || []).forEach(async (f) => {
+      if (!f.id) return;
+      try {
+        await gapi.client.drive.files.delete({ fileId: f.id });
+      } catch (err) {
+        console.error("Failed to delete legacy file", err);
+      }
+    });
   } catch (err) {
     console.error("Cleanup old sync files failed", err);
   }
