@@ -466,34 +466,14 @@ async function loadStateFromCloud({
     return false;
   }
   try {
-    let fileId = localStorage.getItem(SYNC_FILE_ID_KEY) || null;
-    let file = null;
-    if (fileId) {
-      try {
-        const res = await gapi.client.drive.files.get({ fileId, fields: "id, name" });
-        file = res.result;
-      } catch (err) {
-        file = null;
-      }
-    }
-    if (!file) {
-      const res = await gapi.client.drive.files.list({
-        q: `name='${SYNC_FILE_NAME}' and trashed=false`,
-        pageSize: 1,
-        fields: "files(id, name)",
-      });
-      file = res.result.files && res.result.files[0];
-      if (file && file.id) {
-        localStorage.setItem(SYNC_FILE_ID_KEY, file.id);
-      }
-    }
-    if (!file) {
+    const fileId = await resolveSyncFileId();
+    if (!fileId) {
       setSyncStatus("No cloud copy found. Push to create one.");
       return false;
     }
     try {
       const content = await gapi.client.drive.files.get({
-        fileId: file.id,
+        fileId,
         alt: "media",
       });
       applyStateFromSync(content.result);
@@ -507,11 +487,6 @@ async function loadStateFromCloud({
     } catch (err) {
       console.error("Load sync file failed", err);
       if (err.status === 403 || err.status === 404) {
-        try {
-          await gapi.client.drive.files.delete({ fileId: file.id });
-        } catch (e) {
-          console.error("Failed to delete stale sync file", e);
-        }
         localStorage.removeItem(SYNC_FILE_ID_KEY);
         setSyncStatus("Cloud copy unavailable. Push to create a new one.");
       } else {
@@ -557,32 +532,12 @@ async function saveStateToCloud() {
   };
 
   try {
-    let fileId = localStorage.getItem(SYNC_FILE_ID_KEY) || null;
-    let file = null;
+    let fileId = await resolveSyncFileId();
+
     if (fileId) {
       try {
-        const res = await gapi.client.drive.files.get({ fileId, fields: "id, name" });
-        file = res.result;
-      } catch (err) {
-        file = null;
-      }
-    }
-    if (!file) {
-      const res = await gapi.client.drive.files.list({
-        q: `name='${SYNC_FILE_NAME}' and trashed=false`,
-        pageSize: 1,
-        fields: "files(id, name)",
-      });
-      file = res.result.files && res.result.files[0];
-      if (file && file.id) {
-        localStorage.setItem(SYNC_FILE_ID_KEY, file.id);
-      }
-    }
-
-    if (file && file.id) {
-      try {
         await gapi.client.drive.files.update({
-          fileId: file.id,
+          fileId,
           uploadType: "media",
           media: {
             mimeType: "application/json",
@@ -617,6 +572,34 @@ async function saveStateToCloud() {
       setSyncStatus("Sync save failed.");
     }
   }
+}
+
+async function resolveSyncFileId() {
+  let fileId = localStorage.getItem(SYNC_FILE_ID_KEY) || null;
+  if (fileId) {
+    try {
+      await gapi.client.drive.files.get({ fileId, fields: "id" });
+      return fileId;
+    } catch (e) {
+      localStorage.removeItem(SYNC_FILE_ID_KEY);
+    }
+  }
+  try {
+    const res = await gapi.client.drive.files.list({
+      q: `name='${SYNC_FILE_NAME}' and trashed=false`,
+      orderBy: "modifiedTime desc",
+      pageSize: 1,
+      fields: "files(id)",
+    });
+    const file = res.result.files && res.result.files[0];
+    if (file && file.id) {
+      localStorage.setItem(SYNC_FILE_ID_KEY, file.id);
+      return file.id;
+    }
+  } catch (err) {
+    console.error("Resolve sync file failed", err);
+  }
+  return null;
 }
 
 function scheduleSyncSave() {
