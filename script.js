@@ -488,9 +488,8 @@ async function loadStateFromCloud({
       }
     }
     if (!file) {
-      setSyncStatus("No sync file yet. Saving your data...");
-      await saveStateToCloud();
-      return true;
+      setSyncStatus("No cloud copy found. Push to create one.");
+      return false;
     }
     try {
       const content = await gapi.client.drive.files.get({
@@ -498,7 +497,7 @@ async function loadStateFromCloud({
         alt: "media",
       });
       applyStateFromSync(content.result);
-      if (!suppressStatus) setSyncStatus("Synced from cloud.");
+      if (!suppressStatus) setSyncStatus("Pulled latest from cloud.");
       setLastSynced(new Date());
       if (refreshUI) refreshUIFromLocal();
       if (reloadAfter) {
@@ -513,8 +512,8 @@ async function loadStateFromCloud({
         } catch (e) {
           console.error("Failed to delete stale sync file", e);
         }
-        setSyncStatus("Recreating sync file…");
-          await saveStateToCloud();
+        localStorage.removeItem(SYNC_FILE_ID_KEY);
+        setSyncStatus("Cloud copy unavailable. Push to create a new one.");
       } else {
         setSyncStatus("Sync load failed.");
       }
@@ -608,7 +607,7 @@ async function saveStateToCloud() {
     if (fileId) {
       await cleanupOldSyncFiles(fileId);
     }
-    setSyncStatus("Synced.");
+    setSyncStatus("Pushed to cloud.");
     setLastSynced(new Date());
   } catch (err) {
     console.error("Save sync failed", err);
