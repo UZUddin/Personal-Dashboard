@@ -1487,6 +1487,7 @@ function initWeatherAutoRefresh() {
 // Use in console for quick sanity checks:
 //   window.devDumpSyncState()  -> returns the JSON we push to Drive
 //   window.devClearLocalState() -> clears dash_* keys to mimic a fresh device (keeps auth/sync metadata)
+//   window.devListSyncFiles() -> lists files matching the sync queries to debug Drive visibility
 window.devDumpSyncState = function devDumpSyncState() {
   return getLocalStateForSync();
 };
@@ -1498,4 +1499,31 @@ window.devClearLocalState = function devClearLocalState() {
   renderConsistencyChart();
   updateProgressRing();
   setSyncStatus("Local dash_* cleared (auth/metadata kept).");
+};
+
+window.devListSyncFiles = async function devListSyncFiles() {
+  if (!gapi.client || !gapi.client.drive) {
+    console.warn("Drive client not ready");
+    return null;
+  }
+  try {
+    const byApp = await gapi.client.drive.files.list({
+      q: "appProperties has { key='app' and value='bedside-dash' } and trashed=false",
+      orderBy: "modifiedTime desc",
+      pageSize: 5,
+      fields: "files(id,name,appProperties,modifiedTime)",
+    });
+    const byName = await gapi.client.drive.files.list({
+      q: `name='${SYNC_FILE_NAME}' and trashed=false`,
+      orderBy: "modifiedTime desc",
+      pageSize: 5,
+      fields: "files(id,name,appProperties,modifiedTime)",
+    });
+    console.log("Sync files by appProperties", byApp.result.files);
+    console.log("Sync files by name", byName.result.files);
+    return { byApp: byApp.result.files, byName: byName.result.files };
+  } catch (err) {
+    console.error("devListSyncFiles failed", err);
+    return null;
+  }
 };
