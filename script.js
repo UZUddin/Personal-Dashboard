@@ -16,6 +16,10 @@ const SYNC_APP_PROPS = {
   app: "bedside-dash",
   type: "state",
 };
+const SYNC_APP_PROPS = {
+  app: "bedside-dash",
+  type: "state",
+};
 // Google Calendar settings — replace the placeholders with your own keys
 const GOOGLE_CLIENT_ID =
   cfgStr(DASH_CONFIG.GOOGLE_CLIENT_ID) || "937730038587-2h98cjh6t1tk4i0n3r7mckibils2cb6u.apps.googleusercontent.com";
@@ -424,8 +428,8 @@ function getLocalStateForSync() {
   return {
     version: 1,
     updatedAt: new Date().toISOString(),
-    data,
     app: "bedside-dash",
+    data,
   };
 }
 
@@ -646,7 +650,7 @@ async function cleanupOldSyncFiles(keepId) {
       q: "appProperties has { key='app' and value='bedside-dash' } and trashed=false",
       orderBy: "modifiedTime desc",
       pageSize: 50,
-      fields: "files(id)",
+      fields: "files(id,name)",
     });
     const files = (res.result && res.result.files) || [];
     for (const f of files) {
