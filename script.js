@@ -16,10 +16,6 @@ const SYNC_APP_PROPS = {
   app: "bedside-dash",
   type: "state",
 };
-const SYNC_APP_PROPS = {
-  app: "bedside-dash",
-  type: "state",
-};
 // Google Calendar settings — replace the placeholders with your own keys
 const GOOGLE_CLIENT_ID =
   cfgStr(DASH_CONFIG.GOOGLE_CLIENT_ID) || "937730038587-2h98cjh6t1tk4i0n3r7mckibils2cb6u.apps.googleusercontent.com";
