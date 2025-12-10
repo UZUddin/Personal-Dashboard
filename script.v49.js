@@ -24,7 +24,7 @@ const SYNC_APP_PROPS = {
 // Google Calendar settings — replace the placeholders with your own keys
 const GOOGLE_CLIENT_ID =
   cfgStr(DASH_CONFIG.GOOGLE_CLIENT_ID) || "937730038587-2h98cjh6t1tk4i0n3r7mckibils2cb6u.apps.googleusercontent.com";
-const GOOGLE_API_KEY = cfgStr(DASH_CONFIG.GOOGLE_API_KEY) || "AIzaSyDOuPBt1SEWtvEN7ZHqB98Z6Uq2SlmlyFQ";
+const GOOGLE_API_KEY = cfgStr(DASH_CONFIG.GOOGLE_API_KEY) || "AIzaSyDOuPBt1SEWtvEN7ZHqB98Z6Uq2SlmlyFQY";
 const GOOGLE_CALENDAR_ID = "primary";
 const GOOGLE_DISCOVERY_DOCS = [
   "https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest",
