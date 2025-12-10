@@ -32,8 +32,6 @@ const GOOGLE_DISCOVERY_DOCS = [
 ];
 const GOOGLE_SCOPES =
   "https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/drive.file";
-const SAMPLE_GOOGLE_CLIENT_ID = "937730038587-2h98cjh6t1tk4i0n3r7mckibils2cb6u.apps.googleusercontent.com";
-const SAMPLE_GOOGLE_API_KEY = "AIzaSyDOuPBt1SEWtvEN7ZHqB98Z6Uq2SlmlyFQ";
 const WEATHER_ICON_KIND = {
   SUNNY: "sunny",
   CLOUDY: "cloudy",
@@ -74,13 +72,6 @@ function getCalendarConfigIssue() {
     !GOOGLE_API_KEY || GOOGLE_API_KEY === "SET_GOOGLE_API_KEY";
   if (missingKey) {
     return "Add your Google API key in config.v49.js.";
-  }
-
-  const usingSampleKeys =
-    GOOGLE_CLIENT_ID === SAMPLE_GOOGLE_CLIENT_ID ||
-    GOOGLE_API_KEY === SAMPLE_GOOGLE_API_KEY;
-  if (usingSampleKeys) {
-    return "Use your own Google OAuth client ID/API key in config.v49.js (sample keys are blocked).";
   }
 
   const isFileOrigin =
