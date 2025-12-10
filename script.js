@@ -32,6 +32,8 @@ const GOOGLE_DISCOVERY_DOCS = [
 ];
 const GOOGLE_SCOPES =
   "https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/drive.file";
+const SAMPLE_GOOGLE_CLIENT_ID = "937730038587-2h98cjh6t1tk4i0n3r7mckibils2cb6u.apps.googleusercontent.com";
+const SAMPLE_GOOGLE_API_KEY = "AIzaSyDOuPBt1SEWtvEN7ZHqB98Z6Uq2SlmlyFQ";
 const WEATHER_ICON_KIND = {
   SUNNY: "sunny",
   CLOUDY: "cloudy",
@@ -58,12 +60,38 @@ let calendarTriedSilent = false;
 let syncPendingSave = null;
 
 function calendarConfigReady() {
-  return (
-    GOOGLE_CLIENT_ID &&
-    !GOOGLE_CLIENT_ID.startsWith("SET_") &&
-    GOOGLE_API_KEY &&
-    GOOGLE_API_KEY !== "SET_GOOGLE_API_KEY"
-  );
+  return getCalendarConfigIssue() === "";
+}
+
+function getCalendarConfigIssue() {
+  const missingClient =
+    !GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID.startsWith("SET_");
+  if (missingClient) {
+    return "Add your Google OAuth client ID in config.v49.js.";
+  }
+
+  const missingKey =
+    !GOOGLE_API_KEY || GOOGLE_API_KEY === "SET_GOOGLE_API_KEY";
+  if (missingKey) {
+    return "Add your Google API key in config.v49.js.";
+  }
+
+  const usingSampleKeys =
+    GOOGLE_CLIENT_ID === SAMPLE_GOOGLE_CLIENT_ID ||
+    GOOGLE_API_KEY === SAMPLE_GOOGLE_API_KEY;
+  if (usingSampleKeys) {
+    return "Use your own Google OAuth client ID/API key in config.v49.js (sample keys are blocked).";
+  }
+
+  const isFileOrigin =
+    typeof window !== "undefined" &&
+    window.location &&
+    window.location.protocol === "file:";
+  if (isFileOrigin) {
+    return "Google sign-in needs http://localhost — run a local server instead of opening the file directly.";
+  }
+
+  return "";
 }
 
 function initCalendarUI() {
@@ -75,15 +103,16 @@ function initCalendarUI() {
 
   if (!connectBtn || !signOutBtn || !statusEl || !pushBtn || !pullBtn) return;
 
-  if (!calendarConfigReady()) {
+  const configIssue = getCalendarConfigIssue();
+  if (configIssue) {
     connectBtn.disabled = true;
     signOutBtn.disabled = true;
     pushBtn.disabled = true;
     pullBtn.disabled = true;
-    statusEl.textContent =
-      "Add your Google client ID and API key in script.js to enable.";
+    statusEl.textContent = configIssue;
     return;
   }
+
 
   connectBtn.addEventListener("click", onCalendarAuthClick);
   signOutBtn.addEventListener("click", onCalendarSignOut);
@@ -95,7 +124,11 @@ function initCalendarUI() {
 }
 
 function gapiLoaded() {
-  if (!calendarConfigReady()) return;
+  const configIssue = getCalendarConfigIssue();
+  if (configIssue) {
+    setCalendarStatus(configIssue);
+    return;
+  }
   if (typeof gapi === "undefined") return;
   gapi.load("client", initializeGapiClient);
 }
@@ -117,7 +150,11 @@ async function initializeGapiClient() {
 }
 
 function gisLoaded() {
-  if (!calendarConfigReady()) return;
+  const configIssue = getCalendarConfigIssue();
+  if (configIssue) {
+    setCalendarStatus(configIssue);
+    return;
+  }
   if (typeof google === "undefined" || !google.accounts) return;
 
   calendarTokenClient = google.accounts.oauth2.initTokenClient({
