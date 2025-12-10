@@ -1341,32 +1341,48 @@ function buildOutfitSuggestion(low, high, detailText) {
     text.includes("shower") ||
     text.includes("storm") ||
     text.includes("drizzle");
-
-  if (mentionsRain) {
-    return "Rain expected — bring an umbrella or waterproof layer.";
-  }
+  const mentionsSnow =
+    text.includes("snow") ||
+    text.includes("flurries") ||
+    text.includes("sleet") ||
+    text.includes("ice");
+  const windy = text.includes("wind") || text.includes("breeze") || text.includes("gust");
+  const humid = text.includes("humid") || text.includes("muggy");
 
   if (low === null || high === null) {
     return "Set today’s temps to get a wear recommendation.";
   }
 
-  if (low <= 40) {
-    return "Really cold — wear a warm jacket or coat with layers.";
+  const swing = Math.abs(high - low);
+  let base;
+
+  if (swing >= 22) {
+    base = "Big temp swing — start with a breathable base and removable layers (tee + light jacket).";
+  } else if (swing >= 12) {
+    base = "Morning chill, warmer later — light layers you can peel off midday.";
+  } else if (high <= 40) {
+    base = "Cold all day — insulated coat, hat, and gloves you’ll keep on.";
+  } else if (high <= 55) {
+    base = "Chilly and steady — sweater/hoodie plus a coat that stays on.";
+  } else if (high <= 70) {
+    base = "Mild and steady — long sleeve or light sweater; thin jacket if you run cold.";
+  } else if (high <= 82) {
+    base = "Comfortable — tee or breathable layers; light overshirt optional.";
+  } else {
+    base = "Hot and steady — airy fabrics, shorts, hat, and water.";
   }
 
-  if (low <= 55 && high >= 72) {
-    return "Cool morning, warm afternoon — light layers and a removable jacket.";
+  const extras = [];
+  if (mentionsSnow) {
+    extras.push("add something waterproof/insulated (boots, parka).");
+  } else if (mentionsRain) {
+    extras.push("pack a waterproof layer or umbrella.");
   }
+  if (windy) extras.push("windy — grab a windbreaker and secure hat.");
+  if (humid && high >= 75) extras.push("go extra breathable to handle the humidity.");
 
-  if (high <= 65) {
-    return "Chilly all day — a hoodie or sweater you can keep on.";
-  }
-
-  if (high >= 85) {
-    return "Hot — light, breathable layers are best.";
-  }
-
-  return "Comfortable — light layers should be perfect.";
+  if (!extras.length) return base;
+  return `${base} ${extras.join(" ")}`;
 }
 
 function pickWeatherIcon(detailText) {
