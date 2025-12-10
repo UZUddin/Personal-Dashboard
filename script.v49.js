@@ -547,55 +547,76 @@ async function saveStateToCloud() {
     setSyncStatus("Sync unavailable.");
     return;
   }
+
+  // 1. Check Permissions
   const token = gapi.client.getToken && gapi.client.getToken();
   const hasDrive = token && token.scope && token.scope.includes("drive.file");
   if (!hasDrive) {
     setSyncStatus("Sync needs Drive access. Reconnect and accept Drive.");
     return;
   }
+
+  setSyncStatus("Pushing...");
   const payload = getLocalStateForSync();
-  const createFile = async () => {
+  const fileContent = JSON.stringify(payload);
+
+  try {
+    // 2. Try to find existing file
+    let fileId = await resolveSyncFileId();
+
+    if (fileId) {
+      // --- UPDATE PATH (Fixes syncing bugs) ---
+      try {
+        await gapi.client.drive.files.update({
+          fileId: fileId,
+          uploadType: "multipart",
+          media: {
+            mimeType: "application/json",
+            body: fileContent,
+          },
+        });
+        setSyncStatus("Pushed to cloud (Updated).");
+        setLastSynced(new Date());
+        return; // Success! We are done.
+      } catch (updateErr) {
+        console.warn("Update failed, falling back to create", updateErr);
+        // If update failed (e.g. 404), clear the ID and fall through to create
+        fileId = null;
+        localStorage.removeItem(SYNC_FILE_ID_KEY);
+      }
+    }
+
+    // --- CREATE PATH (Only runs if no file exists) ---
     const res = await gapi.client.drive.files.create({
       resource: {
         name: SYNC_FILE_NAME,
         appProperties: SYNC_APP_PROPS,
-        parents: ["root"], // ensure it lands in My Drive (visible to drive.file scope)
+        parents: ["root"],
       },
-      uploadType: "multipart", // needed to ensure metadata (name/appProperties) is saved
+      uploadType: "multipart",
       media: {
         mimeType: "application/json",
-        body: JSON.stringify(payload),
+        body: fileContent,
       },
-      fields: "id,name,appProperties,modifiedTime,parents",
+      fields: "id",
     });
+
     if (res && res.result && res.result.id) {
       localStorage.setItem(SYNC_FILE_ID_KEY, res.result.id);
-      return res.result.id;
-    }
-    return null;
-  };
 
-  try {
-    const previousFileId = await resolveSyncFileId();
-    const newFileId = await createFile();
-    if (!newFileId) {
-      setSyncStatus("Push failed to create cloud copy.");
-      return;
+      // Clean up duplicates just in case, but keep the new one
+      await cleanupOldSyncFiles(res.result.id);
+
+      setSyncStatus("Pushed to cloud (Created new).");
+      setLastSynced(new Date());
+    } else {
+      setSyncStatus("Push failed.");
     }
-    if (newFileId && previousFileId && previousFileId !== newFileId) {
-      try {
-        await gapi.client.drive.files.delete({ fileId: previousFileId });
-      } catch (err) {
-        console.error("Failed to delete previous sync file", err);
-      }
-    }
-    if (newFileId) await cleanupOldSyncFiles(newFileId);
-    setSyncStatus("Pushed to cloud.");
-    setLastSynced(new Date());
+
   } catch (err) {
     console.error("Save sync failed", err);
     if (err.status === 403) {
-      setSyncStatus("Sync needs Drive access. Reconnect and accept Drive.");
+      setSyncStatus("Sync needs Drive access. Reconnect.");
     } else {
       setSyncStatus("Sync save failed.");
     }
