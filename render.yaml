@@ -1,0 +1,25 @@
+services:
+  # ── FastAPI Backend (weather proxy / prayer times / todos) ──────────────────
+  - type: web
+    name: bedside-dashboard-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.0"
+
+  # ── React Frontend (static site) ───────────────────────────────────────────
+  - type: web
+    name: bedside-dashboard
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: build
+    envVars:
+      # Set these in the Render dashboard — do NOT commit real values here
+      - key: REACT_APP_GOOGLE_CLIENT_ID
+        sync: false
+      - key: REACT_APP_GOOGLE_API_KEY
+        sync: false
